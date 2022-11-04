@@ -37,8 +37,6 @@ export const createHttpsServer = ({ tlsKey, tlsCert }: ServerConfig) => {
         SNICallback: (servername: string, cb: (err: Error | null, ctx?: SecureContext) => void) => {
             const secureContext = servernameToContext[servername]
 
-            console.log("secureContext:", secureContext)
-
             cb(null, secureContext)
         },
     })

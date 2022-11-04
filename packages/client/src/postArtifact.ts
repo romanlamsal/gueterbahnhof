@@ -22,7 +22,7 @@ export async function postArtifact({ appName, host, apiKey }: PostArtifactArgs, 
     })
         .json()
         .then(() => {
-            console.log("SUCCESS!")
+            console.log("Succesfully deployed.")
         })
         .catch(err => {
             console.error("ERROR:", err.code, err.name)

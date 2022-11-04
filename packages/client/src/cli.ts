@@ -7,6 +7,5 @@ export default createCommand("deploy")
     .option("--api-key <string>", "api key for the server's management api")
     .argument("<string>", "directory to deploy")
     .action(async (directoryPath: string, options: PostArtifactArgs) => {
-        console.log(`Updating app ${options.appName}.`, options)
         await postArtifact(options, directoryPath)
     })

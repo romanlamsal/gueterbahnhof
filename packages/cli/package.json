@@ -10,10 +10,8 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "dependencies": {
-    "commander": "^9.4.1"
-  },
   "devDependencies": {
+    "commander": "^9.4.1",
     "@gueterbahnhof/client": "workspace:*",
     "@gueterbahnhof/server": "workspace:*",
     "@types/node": "^18.11.9",
