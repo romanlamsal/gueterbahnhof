@@ -1,0 +1,24 @@
+{
+  "name": "@lamsal-de/gueterbahnhof",
+  "version": "1.0.0",
+  "description": "",
+  "bin": "dist/cli.js",
+  "repository": "https://github.com/romanlamsal/gueterbahnhof",
+  "scripts": {
+    "build": "rm -rf dist && esbuild cli.ts --bundle --outfile=dist/cli.js --platform=node"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "commander": "^9.4.1"
+  },
+  "devDependencies": {
+    "@gueterbahnhof/client": "workspace:*",
+    "@gueterbahnhof/server": "workspace:*",
+    "@types/node": "^18.11.9",
+    "esbuild": "^0.15.13",
+    "tsx": "^3.11.0",
+    "typescript": "^4.8.4"
+  }
+}
