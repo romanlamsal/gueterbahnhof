@@ -1,7 +1,7 @@
 import express from "express"
 import { App } from "@gueterbahnhof/common/App"
 import vhost from "vhost"
-import { createProxyMiddleware } from "http-proxy-middleware"
+import { createProxyMiddleware, fixRequestBody } from "http-proxy-middleware"
 import { startOrReloadApp } from "./pm"
 import { setAppPending } from "./apps"
 
@@ -21,6 +21,7 @@ export async function addAppRoute(app: App) {
                     target: service.target,
                     changeOrigin: true,
                     ws: true,
+                    onProxyReq: fixRequestBody,
                 })
             )
         )
