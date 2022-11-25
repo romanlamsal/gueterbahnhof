@@ -4,6 +4,8 @@ import vhost from "vhost"
 import { createProxyMiddleware, fixRequestBody } from "http-proxy-middleware"
 import { startOrReloadApp } from "./pm"
 import { setAppPending } from "./apps"
+import http from "http"
+import { Request } from "http-proxy-middleware/dist/types"
 
 export const appRouter = express.Router()
 
@@ -21,7 +23,13 @@ export async function addAppRoute(app: App) {
                     target: service.target,
                     changeOrigin: true,
                     ws: true,
-                    onProxyReq: fixRequestBody,
+                    onProxyReq(proxyReq: http.ClientRequest, req: Request) {
+                        fixRequestBody(proxyReq, req)
+                        const xForwardedHost = "x-forwarded-host"
+                        if (!proxyReq.hasHeader(xForwardedHost)) {
+                            proxyReq.setHeader(xForwardedHost, req.host)
+                        }
+                    },
                 })
             )
         )
