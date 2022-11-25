@@ -4,12 +4,19 @@ import vhost from "vhost"
 import { createProxyMiddleware, fixRequestBody } from "http-proxy-middleware"
 import { startOrReloadApp } from "./pm"
 import { setAppPending } from "./apps"
-import http from "http"
+import http, { ClientRequest } from "http"
 import { Request } from "http-proxy-middleware/dist/types"
 
 export const appRouter = express.Router()
 
 const activeRoutes = []
+
+const addXForwardedHost = (proxyReq: ClientRequest, req: Request) => {
+    const xForwardedHost = "x-forwarded-host"
+    if (!proxyReq.hasHeader(xForwardedHost) && req.hostname) {
+        proxyReq.setHeader(xForwardedHost, req.hostname)
+    }
+}
 
 export async function addAppRoute(app: App) {
     const { service } = app
@@ -24,11 +31,12 @@ export async function addAppRoute(app: App) {
                     changeOrigin: true,
                     ws: true,
                     onProxyReq(proxyReq: http.ClientRequest, req: Request) {
-                        fixRequestBody(proxyReq, req)
-                        const xForwardedHost = "x-forwarded-host"
-                        if (!proxyReq.hasHeader(xForwardedHost)) {
-                            proxyReq.setHeader(xForwardedHost, req.host)
+                        try {
+                            addXForwardedHost(proxyReq, req)
+                        } catch (e) {
+                            console.error("Could not set x-forwarded-host header:", e)
                         }
+                        fixRequestBody(proxyReq, req)
                     },
                 })
             )
