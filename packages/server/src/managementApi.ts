@@ -22,7 +22,7 @@ export async function createManagementApi({ appDir, apiKey }: ServerConfig) {
     }
 
     const uploadDest = path.join(appDir, "uploads")
-    const upload = multer({ limits: { fieldSize: undefined, fileSize: undefined } })
+    const upload = multer({ limits: {} })
 
     const router = express.Router()
 
