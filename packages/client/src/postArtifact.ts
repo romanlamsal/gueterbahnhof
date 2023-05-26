@@ -26,5 +26,6 @@ export async function postArtifact({ appName, host, apiKey }: PostArtifactArgs, 
         })
         .catch(err => {
             console.error("ERROR:", err.code, err.name)
+            throw err
         })
 }
