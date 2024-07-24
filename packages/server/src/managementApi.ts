@@ -1,18 +1,20 @@
 import { type ServerConfig } from "@gueterbahnhof/common/ServerConfig"
+import type { Router } from "express"
 import express from "express"
-import { constants, rmSync, writeFileSync } from "fs"
+import { constants, rmSync } from "fs"
 import { access } from "fs/promises"
 import multer from "multer"
 import path from "path"
-import { getApp, toAppPath } from "./apps"
 import AdmZip from "adm-zip"
-import { addAppRoute } from "./appRouter"
+import { updateAppState } from "./app/appState"
+import { getAppConfig } from "./app/appConfigDb"
+import { createUiRouter } from "./ui/router"
 
 function log(...parts: unknown[]) {
     console.log("[Management]", ...parts)
 }
 
-export async function createManagementApi({ appDir, apiKey }: ServerConfig) {
+export async function createManagementApi({ appDir, apiKey }: ServerConfig): Promise<Router> {
     if (
         !(await access(appDir, constants.W_OK)
             .then(() => true)
@@ -21,7 +23,6 @@ export async function createManagementApi({ appDir, apiKey }: ServerConfig) {
         throw new Error("[Management] Could not create: insufficient rights to appdir.")
     }
 
-    const uploadDest = path.join(appDir, "uploads")
     const upload = multer({ limits: {} })
 
     const router = express.Router()
@@ -38,24 +39,25 @@ export async function createManagementApi({ appDir, apiKey }: ServerConfig) {
 
     router.post("/update/:appname", upload.single("artifact"), async (req, res) => {
         const appName = req.params.appname
-        const app = getApp(appName)
 
-        if (!app) {
+        if (!getAppConfig(appName)) {
             res.status(400).send(`App '${appName}' not found.`).end()
             return
         }
 
         log(`Updating artifact for ${req.params.appname}.`)
         res.status(200).end()
-        const zipFileLocation = path.join(uploadDest, app.id + ".zip")
-        writeFileSync(zipFileLocation, req.file.buffer)
-        const appPath = toAppPath(app.id)
+
+        const appPath = path.join(appDir, appName)
         rmSync(appPath, { force: true, recursive: true })
-        const zip = new AdmZip(zipFileLocation)
+
+        const zip = new AdmZip(req.file.buffer)
         zip.extractAllTo(appPath)
 
-        await addAppRoute(app)
+        await updateAppState(appDir, appName)
     })
+
+    router.use("/ui", await createUiRouter())
 
     return router
 }

@@ -1,13 +1,11 @@
-import pm2 from "pm2"
-import { App } from "@gueterbahnhof/common/App"
-import { appToStartOptions } from "./apps"
+import pm2, { StartOptions } from "pm2"
 
 function log(...parts: string[]) {
     console.log("[pm2]", ...parts)
 }
 
-export function getPm(): Promise<typeof pm2> {
-    return new Promise((resolve, reject) => {
+export function getPm() {
+    return new Promise<typeof pm2>((resolve, reject) => {
         pm2.connect(true, err => {
             if (err) {
                 console.error(err)
@@ -18,16 +16,16 @@ export function getPm(): Promise<typeof pm2> {
     })
 }
 
-export function startOrReloadApp(app: App) {
+export function startOrReload(startOptions: StartOptions) {
     return new Promise((resolve, reject) => {
-        pm2.describe(app.name, (err, processDescriptionList) => {
+        pm2.describe(startOptions.name, (err, processDescriptionList) => {
             if (err) {
                 return reject(err)
             }
 
             if (processDescriptionList.length && processDescriptionList[0].pm2_env.status === "online") {
-                log(`Reloading app '${app.name}'.`)
-                pm2.reload(app.name, (err, proc) => {
+                log(`Reloading app '${startOptions.name}'.`)
+                pm2.reload(startOptions.name, (err, proc) => {
                     if (err) {
                         return reject(err)
                     }
@@ -35,8 +33,8 @@ export function startOrReloadApp(app: App) {
                     resolve(proc)
                 })
             } else {
-                log(`Starting app '${app.name}'.`)
-                pm2.start(appToStartOptions(app), (err, proc) => {
+                log(`Starting app '${startOptions.name}'.`)
+                pm2.start(startOptions, (err, proc) => {
                     if (err) {
                         return reject(err)
                     }
@@ -48,15 +46,11 @@ export function startOrReloadApp(app: App) {
     })
 }
 
-export function stopApp({ name }: App) {
-    return new Promise((resolve, reject) => {
-        log(`Stopping app '${name}'.`)
-        pm2.stop(name, (err, proc) => {
-            if (err) {
-                return reject(err)
-            }
-
-            resolve(proc)
+export function stopApp(appName: string) {
+    return new Promise(resolve => {
+        log(`Stopping app '${appName}'.`)
+        pm2.stop(appName, () => {
+            resolve(true)
         })
     })
 }
