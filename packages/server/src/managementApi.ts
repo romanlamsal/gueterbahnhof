@@ -29,17 +29,16 @@ export async function createManagementApi(): Promise<Router> {
 
     const router = express.Router()
 
-    if (apiKey) {
-        router.use((req, res, next) => {
-            if (req.headers.authorization !== apiKey) {
-                res.status(403).send("Unauthorized.").end()
-                return
-            }
-            next()
-        })
-    }
-
     router.post("/update/:appname", upload.single("artifact"), async (req, res) => {
+        if (apiKey) {
+            router.use((req, res) => {
+                if (req.headers.authorization !== apiKey) {
+                    res.status(403).send("Unauthorized.").end()
+                    return
+                }
+            })
+        }
+
         const appName = req.params.appname
 
         if (!getAppConfig(appName)) {

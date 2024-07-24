@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import { program } from "commander"
 import createServerCommand from "@gueterbahnhof/server/cli"
 import clientCommand from "@gueterbahnhof/client/cli"

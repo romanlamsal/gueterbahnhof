@@ -9,10 +9,15 @@ import { deleteAppConfig, getAppConfig } from "../app/appConfigDb"
 import { AppList } from "./components/AppList"
 import { updateAppConfig } from "./updateAppConfig"
 import { deleteAppState, listAppState } from "../app/appState"
+import { addRoutes } from "./components/Login"
+import cookieParser from "cookie-parser"
 
 export const createUiRouter = async (): Promise<Router> => {
     const router = express.Router()
     router.use(express.urlencoded())
+    router.use(cookieParser())
+
+    addRoutes(router)
 
     router.use("/assets", express.static(fileURLToPath(new URL("assets", import.meta.url))))
 

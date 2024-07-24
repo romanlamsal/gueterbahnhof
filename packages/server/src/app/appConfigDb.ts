@@ -19,7 +19,7 @@ export const listAppConfigs = () => Object.values(appConfigDb.data)
 export const getAppConfig = (appName: string) => {
     const appConfig = appConfigDb.data[appName]
 
-    if ("io" in appConfig.env && appConfig.env.io === undefined) {
+    if (appConfig && "io" in appConfig.env && appConfig.env.io === undefined) {
         console.debug("Removing mysterious 'io'")
         delete appConfig.env.io
     }

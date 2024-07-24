@@ -1,9 +1,12 @@
 import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 
-import cliPackageJson from "./package.json" assert {}
-import serverPackageJson from "@gueterbahnhof/server/package.json" assert {}
-import clientPackageJson from "@gueterbahnhof/client/package.json" assert {}
+// prettier-ignore
+import cliPackageJson from "./package.json" assert { type: "json" }
+// prettier-ignore
+import serverPackageJson from "@gueterbahnhof/server/package.json" assert { type: "json" }
+// prettier-ignore
+import clientPackageJson from "@gueterbahnhof/client/package.json" assert { type: "json" }
 import { build } from "esbuild"
 import { join } from "node:path"
 
@@ -13,7 +16,6 @@ if (existsSync(distFilePath)) {
 }
 mkdirSync(distFilePath)
 
-const cliDeps = cliPackageJson.dependencies
 const serverDeps = serverPackageJson.dependencies
 const clientDeps = clientPackageJson.dependencies
 
