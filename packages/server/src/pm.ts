@@ -18,30 +18,31 @@ export function getPm() {
 
 export function startOrReload(startOptions: StartOptions) {
     return new Promise((resolve, reject) => {
-        pm2.describe(startOptions.name, (err, processDescriptionList) => {
+        pm2.describe(startOptions.name, async (err, processDescriptionList) => {
             if (err) {
                 return reject(err)
             }
 
             if (processDescriptionList.length && processDescriptionList[0].pm2_env.status === "online") {
-                log(`Reloading app '${startOptions.name}'.`)
+                /*log(`Reloading app '${startOptions.name}'.`)
                 pm2.reload(startOptions.name, (err, proc) => {
                     if (err) {
                         return reject(err)
                     }
 
                     resolve(proc)
-                })
-            } else {
-                log(`Starting app '${startOptions.name}'.`)
-                pm2.start(startOptions, (err, proc) => {
-                    if (err) {
-                        return reject(err)
-                    }
-
-                    resolve(proc)
-                })
+                })*/
+                await stopApp(startOptions.name)
             }
+
+            log(`Starting app '${startOptions.name}'.`)
+            pm2.start(startOptions, (err, proc) => {
+                if (err) {
+                    return reject(err)
+                }
+
+                resolve(proc)
+            })
         })
     })
 }

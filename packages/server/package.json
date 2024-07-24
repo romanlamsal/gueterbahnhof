@@ -9,11 +9,8 @@
   },
   "scripts": {
     "dev": "npm-run-all -p dev:*",
-    "dev:server": "pnpm tsx watch src/cli.ts server --app-dir \"$HOME/gueterbahnhof\"",
-    "dev:tailwind": "postcss src/ui/assets/tailwind.css -w -o src/ui/assets/styles.css",
-    "build": "rm -rf dist && mkdir dist && npm-run-all -p build:*",
-    "build:server": "tsup src/cli.ts -d dist --format cjs",
-    "build:assets": "mkdir dist/assets && postcss src/ui/assets/tailwind.css -o dist/assets/styles.css && cp src/ui/index.html dist/index.html"
+    "dev:server": "pnpm tsx watch src/cli.ts dev --app-dir /home/roman/gueterbahnhof",
+    "dev:tailwind": "postcss src/ui/assets/tailwind.css -w -o src/ui/assets/styles.css"
   },
   "keywords": [],
   "author": "",
@@ -36,12 +33,10 @@
     "@types/node": "^18.11.9",
     "@types/vhost": "^3.0.4",
     "autoprefixer": "^10.4.19",
-    "esbuild": "^0.15.13",
     "npm-run-all": "^4.1.5",
     "postcss": "^8.4.39",
     "postcss-cli": "^11.0.0",
     "tailwindcss": "^3.4.6",
-    "tsup": "^8.2.2",
     "tsx": "^4.16.2",
     "typescript": "^5.5.4"
   }

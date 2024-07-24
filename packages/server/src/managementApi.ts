@@ -1,4 +1,3 @@
-import { type ServerConfig } from "@gueterbahnhof/common/ServerConfig"
 import type { Router } from "express"
 import express from "express"
 import { constants, rmSync } from "fs"
@@ -9,12 +8,15 @@ import AdmZip from "adm-zip"
 import { updateAppState } from "./app/appState"
 import { getAppConfig } from "./app/appConfigDb"
 import { createUiRouter } from "./ui/router"
+import { getServerConfig } from "./activeConfig"
 
 function log(...parts: unknown[]) {
     console.log("[Management]", ...parts)
 }
 
-export async function createManagementApi({ appDir, apiKey }: ServerConfig): Promise<Router> {
+export async function createManagementApi(): Promise<Router> {
+    const { appDir, apiKey } = getServerConfig()
+
     if (
         !(await access(appDir, constants.W_OK)
             .then(() => true)
@@ -54,10 +56,11 @@ export async function createManagementApi({ appDir, apiKey }: ServerConfig): Pro
         const zip = new AdmZip(req.file.buffer)
         zip.extractAllTo(appPath)
 
-        await updateAppState(appDir, appName)
+        await updateAppState(appName)
     })
 
-    router.use("/ui", await createUiRouter())
+    const uiRouter = await createUiRouter()
+    router.use("/ui", uiRouter)
 
     return router
 }

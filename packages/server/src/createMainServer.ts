@@ -5,12 +5,13 @@ import { createManagementApi } from "./managementApi"
 import * as http from "http"
 import { initAppConfigsDb, listAppConfigs } from "./app/appConfigDb"
 import { listAppState, updateAppState } from "./app/appState"
+import { setServerConfig } from "./activeConfig"
 
-function bootApps(appDir: string) {
-    return Promise.all(listAppConfigs().map(({ name }) => updateAppState(appDir, name)))
+function bootApps() {
+    return Promise.all(listAppConfigs().map(({ name }) => updateAppState(name)))
 }
 
-async function createExpressApp(serverConfig: ServerConfig, pm: Awaited<ReturnType<typeof getPm>>) {
+async function createExpressApp(pm: Awaited<ReturnType<typeof getPm>>) {
     const mainApp = express()
 
     mainApp.use(express.json())
@@ -27,7 +28,8 @@ async function createExpressApp(serverConfig: ServerConfig, pm: Awaited<ReturnTy
         res.json(listAppState())
     })
 
-    mainApp.use(await createManagementApi(serverConfig))
+    const managementApi = await createManagementApi()
+    mainApp.use(managementApi)
 
     return mainApp
 }
@@ -64,13 +66,14 @@ function createStopFn(server: http.Server, pm: Awaited<ReturnType<typeof getPm>>
 
 export async function createMainServer(serverConfig: ServerConfig) {
     const { port, appDir } = serverConfig
+    setServerConfig(serverConfig)
 
     const pm = await getPm()
 
-    const expressApp = await createExpressApp(serverConfig, pm)
+    const expressApp = await createExpressApp(pm)
 
     await initAppConfigsDb(appDir)
-    await bootApps(appDir).finally(() => {
+    await bootApps().finally(() => {
         const appStates = Object.values(listAppState())
         const startedApps = appStates.filter(appState => appState.state === "started")
         console.log(`Started ${startedApps.length} of ${appStates.length} apps.`)

@@ -1,5 +1,5 @@
 import { ServerConfig } from "@gueterbahnhof/common/ServerConfig"
-import { createCommand } from "commander"
+import { createCommand, program } from "commander"
 import { createMainServer } from "./createMainServer"
 
 const createServerCommand = (version?: string) =>
@@ -20,5 +20,10 @@ const createServerCommand = (version?: string) =>
 
             mainServer.start()
         })
+
+if (process.argv[2] === "dev") {
+    process.argv[2] = "server"
+    program.addCommand(createServerCommand()).parse()
+}
 
 export default createServerCommand

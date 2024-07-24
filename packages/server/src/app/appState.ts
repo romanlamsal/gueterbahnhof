@@ -2,15 +2,20 @@ import path from "path"
 import { getAppConfig } from "./appConfigDb"
 import { startOrReload } from "../pm"
 import { existsSync } from "node:fs"
+import { getServerConfig } from "../activeConfig"
 
-const appState: {
-    [name: string]: { state: "no-entry" | "started" | "errored-start" | "pending" }
+export type AppState = { state: "no-entry" | "started" | "errored-start" | "pending" }
+
+const appStates: {
+    [name: string]: AppState
 } = {}
 
-export const listAppState = () => appState
+export const listAppState = () => appStates
 
-export const updateAppState = async (appDir: string, appName: string) => {
-    appState[appName] = { state: "pending" }
+export const updateAppState = async (appName: string) => {
+    const { appDir } = getServerConfig()
+
+    appStates[appName] = { state: "pending" }
 
     const appConfig = getAppConfig(appName)
 
@@ -24,11 +29,13 @@ export const updateAppState = async (appDir: string, appName: string) => {
     const entryPath = path.resolve(path.join(appDir, appName, appConfig.entry))
 
     if (!existsSync(entryPath)) {
-        appState[appName] = {
+        appStates[appName] = {
             state: "no-entry",
         }
         return
     }
+
+    console.log("(Re-)Starting app:", appConfig)
 
     const appIsStarted = await startOrReload({
         env: appConfig.env,
@@ -42,9 +49,13 @@ export const updateAppState = async (appDir: string, appName: string) => {
         console.warn("Could not start app:", appIsStarted)
     }
 
-    appState[appName] = {
+    appStates[appName] = {
         state: appIsStarted ? "started" : "errored-start",
     }
 
     return appIsStarted
+}
+
+export const deleteAppState = (appName: string) => {
+    delete appStates[appName]
 }

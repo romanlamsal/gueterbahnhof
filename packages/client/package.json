@@ -8,7 +8,7 @@
   },
   "type": "module",
   "scripts": {
-    "build": "tsup src/cli.ts -d dist --format cjs"
+    "dev": "tsx src/cli.ts dev"
   },
   "keywords": [],
   "author": "",
@@ -23,9 +23,7 @@
     "@gueterbahnhof/common": "workspace:*",
     "@types/adm-zip": "^0.5.0",
     "@types/node": "^18.11.9",
-    "esbuild": "^0.23.0",
-    "tsup": "^8.2.2",
-    "tsx": "^3.11.0",
+    "tsx": "^4.16.2",
     "typescript": "^5.5.4"
   }
 }

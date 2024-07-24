@@ -504,21 +504,49 @@ video {
 .static {
   position: static;
 }
+.hidden {
+  display: none;
+}
+.rounded {
+  border-radius: 0.25rem;
+}
 .rounded-xl {
   border-radius: 0.75rem;
 }
 .border {
   border-width: 1px;
 }
-.border-black {
-  --tw-border-opacity: 1;
-  border-color: rgb(0 0 0 / var(--tw-border-opacity));
+.border-transparent {
+  border-color: transparent;
+}
+.bg-red-900 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(127 29 29 / var(--tw-bg-opacity));
+}
+.bg-slate-900 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(15 23 42 / var(--tw-bg-opacity));
+}
+.p-4 {
+  padding: 1rem;
+}
+.px-1 {
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
 }
 .px-2 {
   padding-left: 0.5rem;
   padding-right: 0.5rem;
 }
+.px-4 {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
 .py-1 {
   padding-top: 0.25rem;
   padding-bottom: 0.25rem;
+}
+.text-slate-50 {
+  --tw-text-opacity: 1;
+  color: rgb(248 250 252 / var(--tw-text-opacity));
 }
