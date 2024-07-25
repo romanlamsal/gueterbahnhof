@@ -35,8 +35,6 @@ export const updateAppState = async (appName: string) => {
         return
     }
 
-    console.log("(Re-)Starting app:", appConfig)
-
     const appIsStarted = await startOrReload({
         env: appConfig.env,
         name: appName,

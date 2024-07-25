@@ -16,6 +16,6 @@
     "outDir": "dist"
   },
   "include": [
-    "./cli", "./server/**", "./client/**"
+    "./cli.ts", "./server/**", "./client/**"
   ]
 }

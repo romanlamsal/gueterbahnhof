@@ -6,15 +6,15 @@ import { renderToString } from "react-dom/server"
 import { AppForm } from "./components/AppForm"
 import { EnvInput } from "./components/EnvInput"
 import { deleteAppConfig, getAppConfig } from "../app/appConfigDb"
-import { AppList } from "./components/AppList"
 import { updateAppConfig } from "./updateAppConfig"
 import { deleteAppState, listAppState } from "../app/appState"
 import { addRoutes } from "./components/Login"
 import cookieParser from "cookie-parser"
+import { Layout } from "./components/Layout"
 
 export const createUiRouter = async (): Promise<Router> => {
     const router = express.Router()
-    router.use(express.urlencoded())
+    router.use(express.urlencoded({ extended: true }))
     router.use(cookieParser())
 
     addRoutes(router)
@@ -23,12 +23,6 @@ export const createUiRouter = async (): Promise<Router> => {
 
     router.post("/add-env", (req, res) => res.send(renderToString(<EnvInput />)))
     router.delete("/add-env", (req, res) => res.status(200).end())
-
-    router.get<"/app/:appname?", { appname?: string }>("/app/:appname?", async (req, res) => {
-        const appConfig = await getAppConfig(req.params.appname)
-        console.debug("AppConfig:", appConfig)
-        res.status(200).end(renderToString(<AppForm appConfig={appConfig} />))
-    })
 
     router.post("/app", async (req, res) => {
         const formData = req.body as {
@@ -60,11 +54,24 @@ export const createUiRouter = async (): Promise<Router> => {
         res.setHeader("HX-Replace-Url", `/ui/app/${formData.name}`).status(200).end("Succesfully saved")
     })
 
-    router.use("", async (req, res) => {
+    router.get<"/app/:appname?", { appname?: string }>("/app/:appname?", async (req, res) => {
+        const appStates = listAppState()
+        const appConfig = await getAppConfig(req.params.appname)
+        console.debug("AppConfig:", appConfig)
+        res.status(200).end(
+            renderToString(
+                <Layout appStates={appStates} active={req.params.appname}>
+                    <AppForm appConfig={appConfig} />
+                </Layout>,
+            ),
+        )
+    })
+
+    router.get("", async (req, res) => {
         const appStates = listAppState()
         res.status(200)
             .set({ "Content-Type": "text/html" })
-            .end(renderToString(<AppList appStates={appStates} />))
+            .end(renderToString(<Layout appStates={appStates} />))
     })
 
     return router

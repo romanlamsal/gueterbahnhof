@@ -1,19 +1,20 @@
 import { ServerConfig } from "@gueterbahnhof/common/ServerConfig"
-import { createCommand, program } from "commander"
+import { createCommand, Option, program } from "commander"
 import { createMainServer } from "./createMainServer"
+import "dotenv/config"
 
 const createServerCommand = (version?: string) =>
     createCommand("server")
-        .requiredOption("--app-dir <string>", "set app directory to use")
-        .option("-p, --port <number>", "set server port")
-        .option("--api-key <string>", "api key for the management api")
+        .addOption(
+            new Option("--app-dir <string>", "set app directory to use")
+                .default(process.env.GUETERBAHNHOF_APP_DIR || undefined)
+                .makeOptionMandatory(true),
+        )
+        .option("-p, --port <number>", "set server port", process.env.GUETERBAHNHOF_PORT || "4444")
+        .option("--api-key <string>", "api key for the management api", process.env.GUETERBAHNHOF_API_KEY)
         .action(async (options: ServerConfig) => {
             if (version) {
                 console.log("Starting server in version", version)
-            }
-
-            if (!options.port) {
-                options.port = 4444
             }
 
             const mainServer = await createMainServer(options)

@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    button {
+        @apply bg-white rounded-sm border;
+    }
+
+    input:not([type]), input[type="text"] {
+        @apply rounded-sm border px-1 py-0.5;
+    }
+}
+
+@layer components {
+    h1 {
+        @apply text-5xl;
+    }
+
+    h2 {
+        @apply text-3xl;
+    }
+
+    label div, fieldset legend {
+        @apply text-sm;
+    }
+
+    button {
+        @apply px-2 py-1;
+
+        &:hover {
+            @apply brightness-110;
+        }
+    }
+
+    button[data-size="sm"] {
+        @apply text-sm;
+    }
+
+    button[data-variant="primary"] {
+        @apply bg-slate-700 text-slate-50;
+    }
+
+    button[data-variant="destructive"] {
+        @apply bg-red-900 text-slate-50;
+    }
+}

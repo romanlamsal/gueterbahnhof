@@ -13,6 +13,6 @@ export const Root = ({ children }: PropsWithChildren<unknown>) => (
             ></script>
             <link rel="stylesheet" href="/ui/assets/styles.css" />
         </head>
-        <body>{children}</body>
+        <body className={"bg-gray-100"}>{children}</body>
     </html>
 )

@@ -1,25 +1,31 @@
 import React from "react"
 import { AppConfig } from "../../app/appConfigDb"
 import { EnvInput } from "./EnvInput"
-import { Root } from "./Root"
 
 const configName = (s: keyof AppConfig) => s
 
 export const AppForm = ({ appConfig }: { appConfig?: AppConfig }) => {
     return (
-        <Root>
-            <form hx-post={"/ui/app"} className={"p-4"} hx-target={"#submission-message"} hx-indicator={"#savebtn"}>
+        <main className={"pt-8"}>
+            <h1 className={"mb-2"}>Edit App</h1>
+            {appConfig && <h2>{appConfig.name}</h2>}
+            <form
+                className={"mt-4 w-full max-w-screen-sm space-y-4"}
+                hx-post={"/ui/app"}
+                hx-target={"#submission-message"}
+                hx-indicator={"#savebtn"}
+            >
                 <button name={"intent"} value={"save"} className={"hidden"}>
                     Default button intent
                 </button>
                 <input type={"hidden"} name={"initialName"} defaultValue={appConfig?.name} />
-                <label>
+                <label className={"block"}>
                     <div>AppName</div>
-                    <input className={"rounded-xl border"} name={configName("name")} defaultValue={appConfig?.name} />
+                    <input name={configName("name")} defaultValue={appConfig?.name} />
                 </label>
-                <label>
+                <label className={"block"}>
                     <div>Entry</div>
-                    <input className={"rounded-xl border"} name={configName("entry")} defaultValue={appConfig?.entry} />
+                    <input name={configName("entry")} defaultValue={appConfig?.entry} />
                 </label>
                 <fieldset>
                     <legend>Env</legend>
@@ -29,36 +35,29 @@ export const AppForm = ({ appConfig }: { appConfig?: AppConfig }) => {
                         ))}
                     </ul>
                     <button
-                        className={"rounded border px-1"}
                         type={"button"}
+                        data-size={"sm"}
                         hx-post="/ui/add-env"
                         hx-trigger="click"
                         hx-target="#envs"
                         hx-swap="beforeend"
+                        className={"w-full"}
                     >
                         +
                     </button>
                 </fieldset>
-                {appConfig && (
-                    <button
-                        id={"deletebtn"}
-                        name={"intent"}
-                        value={"delete"}
-                        className={"rounded-xl border border-transparent bg-red-900 px-4 text-slate-50"}
-                    >
-                        delete
+                <footer className={"!mt-12 flex justify-between"}>
+                    {appConfig && (
+                        <button id={"deletebtn"} name={"intent"} value={"delete"} data-variant="destructive">
+                            delete
+                        </button>
+                    )}
+                    <button id={"savebtn"} name={"intent"} value={"save"} data-variant="primary">
+                        save
                     </button>
-                )}
-                <button
-                    id={"savebtn"}
-                    name={"intent"}
-                    value={"save"}
-                    className={"rounded-xl border border-transparent bg-slate-900 px-4 text-slate-50"}
-                >
-                    save
-                </button>
+                </footer>
             </form>
             <div id={"submission-message"}></div>
-        </Root>
+        </main>
     )
 }
