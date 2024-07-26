@@ -2,8 +2,14 @@ name: build-and-deploy
 
 on:
   push:
+    paths-ignore:
+      - ./action
+      - README.md
     branches:
       - main
+  workflow_dispatch:
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
   build-and-deploy:
@@ -13,10 +19,6 @@ jobs:
       - uses: actions/setup-node@v2
         with:
           node-version: "18.20.3"
-      - name: Setup token
-        run: |
-          npm config set access=public
-          npm config set //registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}
 
       # Node
       - name: Cache node_modules
@@ -35,9 +37,13 @@ jobs:
         run: |
           pnpm build
 
-      - name: Publish
-        if: github.ref == 'refs/heads/main'
-        working-directory: packages/cli/dist
-        run: |
-          npm version 0.1.${{ github.run_number }} --no-git-tag-version
-          npm publish
+      - name: 📣 Create Release Pull Request or Publish to npm
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          title: "chore(release): version packages 🦋"
+          publish: pnpm changeset publish
+          commit: "chore(release): version packages 🦋 [skip ci]"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

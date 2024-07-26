@@ -1,0 +1,27 @@
+name: "gueterbahnhof-deploy"
+description: "Deploy something to your gueterbahnhof server."
+
+inputs:
+  host:
+    description: Full host address to your gueterbahnhof server.
+    required: true
+  service_name:
+    description: Name of the service to deploy
+    required: true
+  path:
+    description: Path to the artifact you want to deploy (a zip or a directory)
+    required: true
+  api_key:
+    description: Api key, if applicable
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: gueterbahnhof deploy ${{ inputs.path }}
+      env:
+        GUETERBAHNHOF_HOST: ${{ inputs.host }}
+        GUETERBAHNHOF_SERVER_NAME: ${{ inputs.service_name }}
+        GUETERBAHNHOF_API_KEY: ${{ inputs.api_key }}
