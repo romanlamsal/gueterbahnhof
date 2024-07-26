@@ -1,4 +1,5 @@
-import pm2, { StartOptions } from "pm2"
+import type { StartOptions } from "pm2";
+import pm2 from "pm2"
 
 function log(...parts: string[]) {
     console.log("[pm2]", ...parts)

@@ -1,4 +1,5 @@
-import { AppConfig, saveAppConfig } from "../app/appConfigDb"
+import type { AppConfig} from "../app/appConfigDb";
+import { saveAppConfig } from "../app/appConfigDb"
 import { stopApp } from "../pm"
 import { updateAppState } from "../app/appState"
 

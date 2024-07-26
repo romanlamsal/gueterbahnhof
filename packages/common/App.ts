@@ -1,4 +1,4 @@
-import { StartOptions } from "pm2"
+import type { StartOptions } from "pm2"
 
 // 'entry' must be a relative path in the app's artifact
 type ServiceConfig = Omit<StartOptions, "name" | "script"> & { entry: string }

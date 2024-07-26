@@ -1,5 +1,6 @@
 import { createCommand, program } from "commander"
-import { postArtifact, PostArtifactArgs } from "./postArtifact"
+import type { PostArtifactArgs } from "./postArtifact";
+import { postArtifact } from "./postArtifact"
 
 const clientCommand = createCommand("deploy")
     .requiredOption("-n, --app-name <string>", "name of the app to update")

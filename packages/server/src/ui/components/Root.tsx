@@ -1,5 +1,5 @@
 import React from "react"
-import { PropsWithChildren } from "react"
+import type { PropsWithChildren } from "react"
 
 export const Root = ({ children }: PropsWithChildren<unknown>) => (
     <html lang="en">

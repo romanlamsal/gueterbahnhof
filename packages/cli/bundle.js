@@ -1,11 +1,7 @@
 import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
-
-// prettier-ignore
 import cliPackageJson from "./package.json" assert { type: "json" }
-// prettier-ignore
 import serverPackageJson from "@gueterbahnhof/server/package.json" assert { type: "json" }
-// prettier-ignore
 import clientPackageJson from "@gueterbahnhof/client/package.json" assert { type: "json" }
 import { build } from "esbuild"
 import { join } from "node:path"
@@ -14,6 +10,7 @@ const distFilePath = fileURLToPath(new URL("dist", import.meta.url))
 if (existsSync(distFilePath)) {
     rmSync(distFilePath, { recursive: true, force: true })
 }
+
 mkdirSync(distFilePath)
 
 const serverDeps = serverPackageJson.dependencies
@@ -29,7 +26,10 @@ build({
     platform: "node",
     format: "esm",
 }).then(async () => {
-    const serverUiDir = new URL("src/ui/", await import.meta.resolve("@gueterbahnhof/server/package.json"))
+    const serverUiDir = new URL(
+        "src/ui/",
+        import.meta.resolve("@gueterbahnhof/server/package.json"),
+    )
     cpSync(new URL("assets", serverUiDir), join(distFilePath, "assets"), { recursive: true })
 
     writeFileSync(

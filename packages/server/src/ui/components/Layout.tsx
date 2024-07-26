@@ -1,5 +1,7 @@
-import React, { PropsWithChildren } from "react"
-import { AppList, AppListProps } from "./AppList"
+import type { PropsWithChildren } from "react";
+import React from "react"
+import type { AppListProps } from "./AppList";
+import { AppList } from "./AppList"
 import { Root } from "./Root"
 
 export const Layout = (props: PropsWithChildren<AppListProps>) => {

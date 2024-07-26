@@ -1,5 +1,5 @@
 import React from "react"
-import { AppState } from "../../app/appState"
+import type { AppState } from "../../app/appState"
 import { clsx } from "clsx"
 
 export type AppListProps = { appStates: { [key: string]: AppState }; active?: string }

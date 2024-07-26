@@ -1,4 +1,4 @@
-import { ServerConfig } from "@gueterbahnhof/common/ServerConfig"
+import type { ServerConfig } from "@gueterbahnhof/common/ServerConfig"
 
 let config: ServerConfig
 

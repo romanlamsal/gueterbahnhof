@@ -1,5 +1,5 @@
 import React from "react"
-import { AppConfig } from "../../app/appConfigDb"
+import type { AppConfig } from "../../app/appConfigDb"
 import { EnvInput } from "./EnvInput"
 
 const configName = (s: keyof AppConfig) => s
@@ -48,7 +48,12 @@ export const AppForm = ({ appConfig }: { appConfig?: AppConfig }) => {
                 </fieldset>
                 <footer className={"!mt-12 flex justify-between"}>
                     {appConfig && (
-                        <button id={"deletebtn"} name={"intent"} value={"delete"} data-variant="destructive">
+                        <button
+                            id={"deletebtn"}
+                            name={"intent"}
+                            value={"delete"}
+                            data-variant="destructive"
+                        >
                             delete
                         </button>
                     )}

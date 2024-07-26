@@ -1,6 +1,6 @@
 import express from "express"
 import { getPm, stopApp } from "./pm"
-import { ServerConfig } from "@gueterbahnhof/common/ServerConfig"
+import type { ServerConfig } from "@gueterbahnhof/common/ServerConfig"
 import { createManagementApi } from "./managementApi"
 import * as http from "http"
 import { initAppConfigsDb, listAppConfigs } from "./app/appConfigDb"
