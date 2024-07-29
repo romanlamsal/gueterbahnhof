@@ -582,44 +582,26 @@ button[data-variant="destructive"] {
 .hidden {
   display: none;
 }
-.h-1 {
-  height: 0.25rem;
-}
-.h-4 {
-  height: 1rem;
-}
 .h-2 {
   height: 0.5rem;
 }
 .h-\[4rem\] {
   height: 4rem;
 }
-.w-full {
-  width: 100%;
-}
-.w-1 {
-  width: 0.25rem;
-}
-.w-4 {
-  width: 1rem;
-}
 .w-2 {
   width: 0.5rem;
+}
+.w-full {
+  width: 100%;
 }
 .max-w-screen-sm {
   max-width: 640px;
 }
-.max-w-screen-md {
-  max-width: 768px;
-}
-.grid-cols-\[10rem_1fr\] {
-  grid-template-columns: 10rem 1fr;
+.grid-cols-\[12rem_1fr\] {
+  grid-template-columns: 12rem 1fr;
 }
 .grid-cols-\[auto_1fr_auto\] {
   grid-template-columns: auto 1fr auto;
-}
-.grid-cols-\[12rem_1fr\] {
-  grid-template-columns: 12rem 1fr;
 }
 .items-center {
   align-items: center;
@@ -647,14 +629,19 @@ button[data-variant="destructive"] {
 .rounded-xl {
   border-radius: 0.75rem;
 }
-.rounded-br-full {
-  border-bottom-right-radius: 9999px;
-}
 .rounded-br-2xl {
   border-bottom-right-radius: 1rem;
 }
 .border {
   border-width: 1px;
+}
+.border-black {
+  --tw-border-opacity: 1;
+  border-color: rgb(0 0 0 / var(--tw-border-opacity));
+}
+.border-gray-200 {
+  --tw-border-opacity: 1;
+  border-color: rgb(229 231 235 / var(--tw-border-opacity));
 }
 .border-red-900 {
   --tw-border-opacity: 1;
@@ -663,37 +650,29 @@ button[data-variant="destructive"] {
 .border-transparent {
   border-color: transparent;
 }
-.border-gray-200 {
-  --tw-border-opacity: 1;
-  border-color: rgb(229 231 235 / var(--tw-border-opacity));
-}
-.border-black {
-  --tw-border-opacity: 1;
-  border-color: rgb(0 0 0 / var(--tw-border-opacity));
-}
 .bg-gray-100 {
   --tw-bg-opacity: 1;
   background-color: rgb(243 244 246 / var(--tw-bg-opacity));
-}
-.bg-red-200 {
-  --tw-bg-opacity: 1;
-  background-color: rgb(254 202 202 / var(--tw-bg-opacity));
 }
 .bg-green-600 {
   --tw-bg-opacity: 1;
   background-color: rgb(22 163 74 / var(--tw-bg-opacity));
 }
+.bg-red-200 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(254 202 202 / var(--tw-bg-opacity));
+}
 .bg-red-600 {
   --tw-bg-opacity: 1;
   background-color: rgb(220 38 38 / var(--tw-bg-opacity));
 }
-.bg-yellow-600 {
-  --tw-bg-opacity: 1;
-  background-color: rgb(202 138 4 / var(--tw-bg-opacity));
-}
 .bg-white {
   --tw-bg-opacity: 1;
   background-color: rgb(255 255 255 / var(--tw-bg-opacity));
+}
+.bg-yellow-600 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(202 138 4 / var(--tw-bg-opacity));
 }
 .px-2 {
   padding-left: 0.5rem;

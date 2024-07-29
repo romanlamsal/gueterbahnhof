@@ -6,13 +6,11 @@ export const Root = ({ children }: PropsWithChildren<unknown>) => (
         <head>
             <meta charSet="UTF-8" />
             <title>Gueterbahnhof Management UI</title>
-            <script
-                src="https://unpkg.com/htmx.org@2.0.1"
-                integrity="sha384-QWGpdj554B4ETpJJC9z+ZHJcA/i59TyjxEPXiiUgN2WmTyV5OEZWCD6gQhgkdpB/"
-                crossOrigin="anonymous"
-            ></script>
             <link rel="stylesheet" href="/ui/assets/styles.css" />
         </head>
-        <body className={"bg-gray-100"}>{children}</body>
+        <body className={"bg-gray-100"}>
+            <div id={"app"}>{children}</div>
+            <script type={"module"} src={"/ui/assets/entry-client.js"} />
+        </body>
     </html>
 )

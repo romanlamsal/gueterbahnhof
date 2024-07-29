@@ -3,14 +3,14 @@ import type { Router } from "express"
 import express from "express"
 import { fileURLToPath } from "node:url"
 import { renderToString } from "react-dom/server"
-import { AppForm } from "./components/AppForm"
 import { EnvInput } from "./components/EnvInput"
-import { deleteAppConfig, getAppConfig } from "../app/appConfigDb"
+import { deleteAppConfig } from "../app/appConfigDb"
 import { updateAppConfig } from "./updateAppConfig"
 import { deleteAppState, listAppState } from "../app/appState"
 import { addRoutes } from "./components/Login"
 import cookieParser from "cookie-parser"
-import { Layout } from "./components/Layout"
+import { App } from "./components/App"
+import { Root } from "./components/Root"
 
 export const createUiRouter = async (): Promise<Router> => {
     const router = express.Router()
@@ -51,13 +51,16 @@ export const createUiRouter = async (): Promise<Router> => {
             return res.send((updateResult as unknown).reason)
         }
 
-        res.setHeader("HX-Replace-Url", `/ui/app/${formData.name}`).status(200).end("Succesfully saved")
+        res.setHeader("HX-Replace-Url", `/ui/app/${formData.name}`)
+            .status(200)
+            .end("Succesfully saved")
     })
 
-    router.get<"/app/:appname?", { appname?: string }>("/app/:appname?", async (req, res) => {
+    /*router.get<"/app/:appname?", { appname?: string }>("/app/:appname?", async (req, res) => {
         const appStates = listAppState()
         const appConfig = await getAppConfig(req.params.appname)
         console.debug("AppConfig:", appConfig)
+        renderToPipeableStream(<div />, {})
         res.status(200).end(
             renderToString(
                 <Layout appStates={appStates} active={req.params.appname}>
@@ -65,13 +68,19 @@ export const createUiRouter = async (): Promise<Router> => {
                 </Layout>,
             ),
         )
-    })
+    })*/
 
-    router.get("", async (req, res) => {
+    router.get("*", async (req, res) => {
         const appStates = listAppState()
         res.status(200)
             .set({ "Content-Type": "text/html" })
-            .end(renderToString(<Layout appStates={appStates} />))
+            .end(
+                renderToString(
+                    <Root>
+                        <App />
+                    </Root>,
+                ),
+            )
     })
 
     return router
