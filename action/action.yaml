@@ -20,8 +20,8 @@ runs:
   using: composite
   steps:
     - shell: bash
-      run: gueterbahnhof deploy ${{ inputs.path }}
+      run: pnpx @lamsal-de/gueterbahnhof deploy ${{ inputs.path }}
       env:
         GUETERBAHNHOF_HOST: ${{ inputs.host }}
-        GUETERBAHNHOF_SERVER_NAME: ${{ inputs.app_name }}
+        GUETERBAHNHOF_APP_NAME: ${{ inputs.app_name }}
         GUETERBAHNHOF_API_KEY: ${{ inputs.api_key }}
