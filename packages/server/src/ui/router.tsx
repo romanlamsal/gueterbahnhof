@@ -21,8 +21,8 @@ export const createUiRouter = async (): Promise<Router> => {
 
     router.use("/assets", express.static(fileURLToPath(new URL("assets", import.meta.url))))
 
-    router.post("/add-env", (req, res) => res.send(renderToString(<EnvInput />)))
-    router.delete("/add-env", (req, res) => res.status(200).end())
+    router.post("/add-env", (_, res) => res.send(renderToString(<EnvInput />)))
+    router.delete("/add-env", (_, res) => res.status(200).end())
 
     router.post("/app", async (req, res) => {
         const formData = req.body as {
@@ -39,7 +39,6 @@ export const createUiRouter = async (): Promise<Router> => {
         }
 
         if (formData.intent === "delete") {
-            console.log("DELETING")
             deleteAppState(formData.name)
             deleteAppConfig(formData.name)
             return res.setHeader("HX-Redirect", `/ui`).status(200).end("")
@@ -48,15 +47,17 @@ export const createUiRouter = async (): Promise<Router> => {
         const updateResult = await updateAppConfig(formData)
 
         if (!updateResult.ok) {
-            return res.send((updateResult as unknown).reason)
+            return res.send((updateResult as { reason?: string }).reason)
         }
 
-        res.setHeader("HX-Replace-Url", `/ui/app/${formData.name}`).status(200).end("Succesfully saved")
+        res.setHeader("HX-Replace-Url", `/ui/app/${formData.name}`)
+            .status(200)
+            .end("Succesfully saved")
     })
 
     router.get<"/app/:appname?", { appname?: string }>("/app/:appname?", async (req, res) => {
         const appStates = listAppState()
-        const appConfig = await getAppConfig(req.params.appname)
+        const appConfig = getAppConfig(req.params.appname)
         console.debug("AppConfig:", appConfig)
         res.status(200).end(
             renderToString(
@@ -67,7 +68,7 @@ export const createUiRouter = async (): Promise<Router> => {
         )
     })
 
-    router.get("", async (req, res) => {
+    router.get("", async (_, res) => {
         const appStates = listAppState()
         res.status(200)
             .set({ "Content-Type": "text/html" })

@@ -26,9 +26,9 @@ export const updateAppState = async (appName: string) => {
         }
     }
 
-    const entryPath = path.resolve(path.join(appDir, appName, appConfig.entry))
+    const entryDir = path.resolve(path.join(appDir, appName))
 
-    if (!existsSync(entryPath)) {
+    if (!existsSync(entryDir)) {
         appStates[appName] = {
             state: "no-entry",
         }
@@ -38,7 +38,8 @@ export const updateAppState = async (appName: string) => {
     const appIsStarted = await startOrReload({
         env: appConfig.env,
         name: appName,
-        script: entryPath,
+        script: appConfig.entry,
+        cwd: entryDir,
     })
         .then(() => true)
         .catch(() => false)

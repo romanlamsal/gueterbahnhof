@@ -1,5 +1,11 @@
 # @lamsal-de/gueterbahnhof
 
+## 0.2.2
+
+### Patch Changes
+
+-   fix(server): set cwd to app's directory first before starting and reloading
+
 ## 0.2.1
 
 ### Patch Changes
