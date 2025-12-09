@@ -14,7 +14,7 @@
     "turbo": "^2.0.9",
     "typescript": "^5.5.4"
   },
-  "packageManager": "pnpm@8.15.8",
+  "packageManager": "pnpm@10.24.0",
   "eslintConfig": {
     "extends": [
       "@lamsal-de/eslint-config/react"
