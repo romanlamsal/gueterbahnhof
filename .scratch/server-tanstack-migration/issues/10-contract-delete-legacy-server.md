@@ -4,10 +4,10 @@
 
 **Blocked by:** 09 — Ship it in the published CLI.
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Legacy express server package removed; workspace install, typecheck, build, and tests all green
-- [ ] Dead `Service`/`App` reverse-proxy types removed from the common package
-- [ ] Root route shows or redirects to the app list; template landing page, demo files, template README and scratch servers gone
-- [ ] No remaining references to the removed package anywhere (workspace deps, turbo config, docs)
-- [ ] `current-state.md` gap list re-checked: every item either done or explicitly out of scope
+- [x] Legacy express server package removed; workspace install, typecheck, build, and tests all green
+- [x] Dead `Service`/`App` reverse-proxy types removed from the common package
+- [x] Root route shows or redirects to the app list; template landing page, demo files, template README and scratch servers gone
+- [x] No remaining references to the removed package anywhere (workspace deps, turbo config, docs)
+- [x] `current-state.md` gap list re-checked: every item either done or explicitly out of scope

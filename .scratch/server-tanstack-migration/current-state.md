@@ -106,4 +106,19 @@ All open questions from the survey were resolved. This list is the input for the
 
 Next step: `/to-spec` → `.scratch/server-tanstack-migration/spec.md`.
 
+## Migration completed (2026-08-04)
+
+All tickets 01–10 implemented on `feat/server-tanstack`. Gap list re-checked:
+
+1. Deploy endpoint stub → real async deploy (tickets 02/03, ADR-0001)
+2. No auth → API key + verified session cookie (04)
+3. No delete-app → full cleanup with confirm (06)
+4. No public status API → `GET /apps` (07)
+5. Not wired into CLI → packaged nitro output ships in the bin (09)
+6. Landing page template → `/` redirects to the app list; template leftovers, `custom-server.js`, `hello-server.js` deleted (10)
+7. No config migration → auto-migration incl. artifact-dir moves (08)
+8. Static app state → SSE live updates + `no-artifact` state (07)
+
+Dead code: `packages/server` and `packages/common` deleted entirely (nothing consumed `ServerConfig` anymore); the `check=true` client field and the `'io'` env workaround died with their owners. Terminology: `entry`, `createApp`, apps keyed by `id` with unique `name` — all per CONTEXT.md.
+
 ## Comments

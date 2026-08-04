@@ -22,7 +22,6 @@
     "got": "^12.5.2"
   },
   "devDependencies": {
-    "@gueterbahnhof/common": "workspace:*",
     "@types/adm-zip": "^0.5.0",
     "@types/node": "^18.11.9",
     "tsx": "^4.16.2",
