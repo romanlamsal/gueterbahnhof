@@ -4,10 +4,10 @@
 
 **Blocked by:** 01 — Prefactor: layer the codebase.
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Legacy `apps.json` migrated on first boot: per-app files with minted ids, `entry` preserved, env preserved, original renamed to `.migrated`; second boot is a no-op
-- [ ] Migration logic tested against real fs in tmpdirs, including idempotency
-- [ ] No interactive prompts anywhere in the boot path; missing dir → created or fail-fast non-zero
-- [ ] Boot starts all configured apps and logs the started/total count
-- [ ] Duplicate SIGTERM/SIGINT wipes processes once, then exits
+- [x] Legacy `apps.json` migrated on first boot: per-app files with minted ids, `entry` preserved, env preserved, original renamed to `.migrated`; second boot is a no-op
+- [x] Migration logic tested against real fs in tmpdirs, including idempotency
+- [x] No interactive prompts anywhere in the boot path; missing dir → created or fail-fast non-zero
+- [x] Boot starts all configured apps and logs the started/total count
+- [x] Duplicate SIGTERM/SIGINT wipes processes once, then exits
