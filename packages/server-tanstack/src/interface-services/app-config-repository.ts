@@ -79,6 +79,11 @@ export const createAppConfigRepository = (appsDir: string) => ({
         return [currentConfig, validation.data] as const
     },
 
+    async findAppConfigByName(name: string) {
+        const configs = await this.listAppConfigs()
+        return configs.find(config => config.name === name)
+    },
+
     async listAppConfigs() {
         const configFiles = await readdir(appsDir)
 

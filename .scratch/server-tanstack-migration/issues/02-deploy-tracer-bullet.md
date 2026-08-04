@@ -4,11 +4,11 @@
 
 **Blocked by:** 01 — Prefactor: layer the codebase.
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] `POST /update/:appname` with multipart field `artifact` returns 202 with a deployment id for a configured app
-- [ ] The app directory is wiped and replaced by the extracted artifact; the app is stopped (if running) and started via the process manager
-- [ ] `GET /update/:appname/status` echoes the deployment id and reaches `succeeded`
-- [ ] Deployment lifecycle rules live in a domain service (pure unit tests); orchestration in an app service (tested with fake process manager and stores); upload/extract in the artifact store interface service (tested against real fs and real zips)
-- [ ] Controller tests cover the 202 shape and status route through the HTTP handler with app services mocked
-- [ ] Real pm2 is never started by any test
+- [x] `POST /update/:appname` with multipart field `artifact` returns 202 with a deployment id for a configured app
+- [x] The app directory is wiped and replaced by the extracted artifact; the app is stopped (if running) and started via the process manager
+- [x] `GET /update/:appname/status` echoes the deployment id and reaches `succeeded`
+- [x] Deployment lifecycle rules live in a domain service (pure unit tests); orchestration in an app service (tested with fake process manager and stores); upload/extract in the artifact store interface service (tested against real fs and real zips)
+- [x] Controller tests cover the 202 shape and status route through the HTTP handler with app services mocked
+- [x] Real pm2 is never started by any test

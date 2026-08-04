@@ -67,6 +67,14 @@ describe("appConfigRepository", () => {
         expect(await repository.updateAppConfig("nope", { name: "x" })).toBeUndefined()
     })
 
+    it("finds a config by app name", async () => {
+        await repository.createAppConfig("app-1", "one")
+        await repository.createAppConfig("app-2", "two")
+
+        expect((await repository.findAppConfigByName("two"))?.id).toBe("app-2")
+        expect(await repository.findAppConfigByName("nope")).toBeUndefined()
+    })
+
     it("lists all configs, ignoring non-json files", async () => {
         await repository.createAppConfig("app-1", "one")
         await repository.createAppConfig("app-2", "two")
