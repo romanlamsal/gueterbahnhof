@@ -4,10 +4,10 @@
 
 **Blocked by:** 02 — Deploy tracer bullet (uses the artifact store's app-directory handling).
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Restart decision (none / restart / recreate) is a pure domain function with unit tests for each rule
-- [ ] Saving with only cosmetic changes does not touch the process; env change recreates it
-- [ ] Duplicate app name on create or rename → rejected, error shown in the UI
-- [ ] Delete: confirm dialog → process stopped and removed, config + sidecar + app directory gone, UI navigates back to the list
-- [ ] App-service tests cover cleanup ordering with fake process manager and stores; repository/artifact-store deletions tested against real fs
+- [x] Restart decision (none / restart / recreate) is a pure domain function with unit tests for each rule
+- [x] Saving with only cosmetic changes does not touch the process; env change recreates it
+- [x] Duplicate app name on create or rename → rejected, error shown in the UI
+- [x] Delete: confirm dialog → process stopped and removed, config + sidecar + app directory gone, UI navigates back to the list
+- [x] App-service tests cover cleanup ordering with fake process manager and stores; repository/artifact-store deletions tested against real fs

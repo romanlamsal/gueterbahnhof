@@ -26,3 +26,10 @@ export const updateAppFunc = createServerFn({ method: "POST" })
         assertUiSession()
         return getAppService().updateAppConfig(appId, config)
     })
+
+export const deleteAppFunc = createServerFn({ method: "POST" })
+    .inputValidator(z.object({ appId: z.string() }))
+    .handler(({ data: { appId } }) => {
+        assertUiSession()
+        return getAppService().deleteApp(appId)
+    })

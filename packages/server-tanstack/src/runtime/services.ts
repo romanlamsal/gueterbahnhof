@@ -26,17 +26,18 @@ export const getAppConfigRepository = () => {
     return appConfigRepository
 }
 
+export const getArtifactStore = () => {
+    artifactStore ??= createArtifactStore(getAppsDir())
+    return artifactStore
+}
+
 export const getAppService = () => {
     appService ??= createAppService({
         configRepository: getAppConfigRepository(),
         processManager: pm2Service,
+        artifactStore: getArtifactStore(),
     })
     return appService
-}
-
-export const getArtifactStore = () => {
-    artifactStore ??= createArtifactStore(getAppsDir())
-    return artifactStore
 }
 
 export const getDeploymentService = () => {

@@ -13,30 +13,37 @@ import { Button } from "@/components/ui/button.tsx"
 import { Input } from "@/components/ui/input.tsx"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.tsx"
 import { Textarea } from "@/components/ui/textarea.tsx"
+import type { AppMutationResult } from "@/app-services/app-service.ts"
 import type { AppConfig } from "@/interface-services/app-config-repository.ts"
-import { loadAppsFunc, updateAppFunc } from "@/routes/ui/-lib/server-funcs.ts"
+import { deleteAppFunc, loadAppsFunc, updateAppFunc } from "@/routes/ui/-lib/server-funcs.ts"
 
 export const Route = createFileRoute("/ui/$appId")({
     component: RouteComponent,
 })
 
+const mutationErrorMessages: Record<string, string> = {
+    "name-taken": "Another app already uses this name.",
+    "not-found": "This app does not exist anymore.",
+    invalid: "The config could not be saved.",
+}
+
 const updateMutationOpts = (appId: string) =>
     ({
         mutationFn: config => updateAppFunc({ data: { appId, config } }),
-        onSuccess: (nextConfig, _, __, { client }) => {
+        onSuccess: (result, _, __, { client }) => {
             client.setQueryData<{ config: AppConfig }[]>(["apps"], prevState => {
-                if (!nextConfig || !prevState) {
+                if (!result.ok || !prevState) {
                     return prevState
                 }
 
                 return [...prevState].map(appData =>
                     appData.config.id !== appId
                         ? appData
-                        : { ...appData, config: { ...appData.config, ...nextConfig } },
+                        : { ...appData, config: { ...appData.config, ...result.config } },
                 )
             })
         },
-    }) satisfies UseMutationOptions<AppConfig | undefined, Error, Partial<AppConfig>>
+    }) satisfies UseMutationOptions<AppMutationResult, Error, Partial<AppConfig>>
 
 const DotenvTextarea = ({
     envs,
@@ -88,7 +95,17 @@ function RouteComponent() {
         select: data => data.find(d => d.config.id === appId),
     })
 
+    const [saveError, setSaveError] = useState<string | undefined>()
     const { mutateAsync: updateAppConfig } = useMutation(updateMutationOpts(appId))
+
+    const navigate = useNavigate()
+    const { mutate: deleteApp } = useMutation({
+        mutationFn: () => deleteAppFunc({ data: { appId } }),
+        onSuccess: (_, __, ___, { client }) => {
+            client.invalidateQueries({ queryKey: ["apps"] })
+            navigate({ to: "/ui" })
+        },
+    })
 
     const [envs, setEnvs] = useState<[string, string][]>(app ? Object.entries(app.config.env) : [])
     useEffect(() => {
@@ -99,7 +116,6 @@ function RouteComponent() {
 
     const [escaped, setEscaped] = useState(false)
 
-    const navigate = useNavigate()
     useEffect(() => {
         if (!app) {
             navigate({ to: "/ui" })
@@ -112,7 +128,7 @@ function RouteComponent() {
 
     return (
         <form
-            onSubmit={ev => {
+            onSubmit={async ev => {
                 ev.preventDefault()
 
                 const formData = new FormData(
@@ -120,19 +136,32 @@ function RouteComponent() {
                     (ev.nativeEvent as unknown as { submitter: HTMLElement }).submitter,
                 )
 
-                return updateAppConfig({
+                const result = await updateAppConfig({
                     env: Object.fromEntries(envs),
                     name: formData.get("name") as string,
                     entry: formData.get("entry") as string,
                 })
+
+                setSaveError(result.ok ? undefined : (mutationErrorMessages[result.code] ?? "Saving failed."))
             }}
             className={"space-y-8 p-4"}
             key={appId}
         >
-            <Button name={"intent"} value={"delete"}></Button>
+            <Button
+                type={"button"}
+                variant={"destructive"}
+                onClick={() => {
+                    if (window.confirm(`Delete app '${app.config.name}'? This removes its process and files.`)) {
+                        deleteApp()
+                    }
+                }}
+            >
+                Delete
+            </Button>
             <label className={"block"}>
                 Name <Input name={"name"} defaultValue={app.config.name} />
             </label>
+            {saveError ? <div className={"text-red-500"}>{saveError}</div> : null}
 
             <label className={"block"}>
                 Entry <Input name={"entry"} defaultValue={app.config.entry} />

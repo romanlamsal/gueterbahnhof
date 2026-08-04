@@ -27,8 +27,8 @@ function RouteComponent() {
         mutationFn: () => createAppFunc(),
         onSuccess: (data, __, ___, context) => {
             context.client.invalidateQueries({ queryKey: ["apps"] })
-            if (data) {
-                navigate({ to: "/ui/$appId", params: { appId: data.id } })
+            if (data.ok) {
+                navigate({ to: "/ui/$appId", params: { appId: data.config.id } })
             }
         },
     })

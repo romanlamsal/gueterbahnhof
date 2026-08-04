@@ -67,6 +67,16 @@ describe("appConfigRepository", () => {
         expect(await repository.updateAppConfig("nope", { name: "x" })).toBeUndefined()
     })
 
+    it("deletes a config together with its env sidecar", async () => {
+        await repository.createAppConfig("app-1", "my app")
+        writeFileSync(join(appsDir, "app-1.env"), "A=b\n")
+
+        await repository.deleteAppConfig("app-1")
+
+        expect(await repository.getAppConfig("app-1")).toBeUndefined()
+        expect(await repository.listAppConfigs()).toEqual([])
+    })
+
     it("finds a config by app name", async () => {
         await repository.createAppConfig("app-1", "one")
         await repository.createAppConfig("app-2", "two")

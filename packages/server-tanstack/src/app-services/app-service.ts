@@ -1,108 +1,150 @@
+import { decideRestart } from "@/domain/app-config-change.ts"
 import type { AppConfig, AppConfigRepository } from "@/interface-services/app-config-repository.ts"
+import type { ArtifactStore } from "@/interface-services/artifact-store.ts"
 import type { AppProcessSpec, ProcessManager } from "@/interface-services/pm-service.ts"
 
-const toProcessSpec = (config: AppConfig): AppProcessSpec => ({
-    name: config.name,
-    entry: config.entry,
-    env: config.env,
-})
+export type AppMutationResult =
+    | { ok: true; config: AppConfig }
+    | { ok: false; code: "not-found" | "name-taken" | "invalid" }
 
 export const createAppService = ({
     configRepository,
     processManager,
+    artifactStore,
 }: {
     configRepository: AppConfigRepository
     processManager: ProcessManager
-}) => ({
-    async startAllApps() {
-        const configs = await configRepository.listAppConfigs()
+    artifactStore: Pick<ArtifactStore, "getAppDir" | "deleteAppDir">
+}) => {
+    const toProcessSpec = (config: AppConfig): AppProcessSpec => ({
+        name: config.name,
+        entry: config.entry,
+        env: config.env,
+        cwd: artifactStore.getAppDir(config.id),
+    })
 
-        const procs = await Promise.all(configs.map(config => processManager.startAppProcess(toProcessSpec(config))))
-
-        console.log(`Started ${procs.filter(Boolean).length} of ${configs.length} apps.`)
-    },
-
-    async wipeAllApps() {
-        const configs = await configRepository.listAppConfigs()
-
-        const procs = await Promise.all(configs.map(config => processManager.deleteAppProcess(config.name)))
-
-        console.log(`Stopped ${procs.filter(Boolean).length} of ${configs.length} apps.`)
-    },
-
-    async listApps() {
-        const configs = await configRepository.listAppConfigs()
-
-        return Promise.all(
-            configs.map(async config => ({
-                config,
-                status: await processManager
-                    .getAppProcess(config.name)
-                    .then(procDescription => procDescription?.pm2_env?.status ?? "unknown"),
-            })),
-        )
-    },
-
-    async createApp(appId: string, name?: string, env?: AppConfig["env"]) {
-        return configRepository.createAppConfig(appId, name ?? appId, env)
-    },
-
-    async startOrReload(appId: string) {
-        const config = await configRepository.getAppConfig(appId)
-
-        if (!config) {
-            console.error(`Failed to start app with id '${appId}': no config.`)
-            return
+    const nameTakenByOther = async (name: string | undefined, appId: string) => {
+        if (!name) {
+            return false
         }
 
-        return processManager.startOrRestartAppProcess(toProcessSpec(config))
-    },
+        const existing = await configRepository.findAppConfigByName(name)
+        return !!existing && existing.id !== appId
+    }
 
-    async updateAppConfig(appId: string, config: Partial<AppConfig>) {
-        const response = await configRepository.updateAppConfig(appId, config)
+    return {
+        async startAllApps() {
+            const configs = await configRepository.listAppConfigs()
 
-        if (!response) {
-            return
-        }
+            const procs = await Promise.all(
+                configs.map(config => processManager.startAppProcess(toProcessSpec(config))),
+            )
 
-        const [prevConfig, currConfig] = response
+            console.log(`Started ${procs.filter(Boolean).length} of ${configs.length} apps.`)
+        },
 
-        if (!(await processManager.getAppProcess(prevConfig.name))) {
-            return currConfig
-        }
+        async wipeAllApps() {
+            const configs = await configRepository.listAppConfigs()
 
-        let shouldStart = false
+            const procs = await Promise.all(configs.map(config => processManager.deleteAppProcess(config.name)))
 
-        if (prevConfig.name !== currConfig.name || prevConfig.entry !== currConfig.entry) {
-            await processManager.stopAppProcess(prevConfig.name)
-            shouldStart = true
-        }
+            console.log(`Stopped ${procs.filter(Boolean).length} of ${configs.length} apps.`)
+        },
 
-        const envChanged = (() => {
-            const prevEnvKeys = Object.keys(prevConfig.env)
-            const currentEnvKeys = Object.keys(currConfig.env)
+        async listApps() {
+            const configs = await configRepository.listAppConfigs()
 
-            if (prevEnvKeys.length !== currentEnvKeys.length) {
-                return true
-            } else if (prevEnvKeys.some(envKey => prevConfig.env[envKey] !== currConfig.env[envKey])) {
-                return true
+            return Promise.all(
+                configs.map(async config => ({
+                    config,
+                    status: await processManager
+                        .getAppProcess(config.name)
+                        .then(procDescription => procDescription?.pm2_env?.status ?? "unknown"),
+                })),
+            )
+        },
+
+        async createApp(appId: string, name?: string, env?: AppConfig["env"]): Promise<AppMutationResult> {
+            const appName = name ?? appId
+
+            if (await nameTakenByOther(appName, appId)) {
+                return { ok: false, code: "name-taken" }
             }
 
-            return false
-        })()
+            const config = await configRepository.createAppConfig(appId, appName, env)
 
-        if (envChanged) {
-            await processManager.stopAppProcess(prevConfig.name)
-            await processManager.deleteAppProcess(prevConfig.name)
-            shouldStart = true
-        }
+            if (!config) {
+                return { ok: false, code: "invalid" }
+            }
 
-        if (shouldStart) {
-            await processManager.startAppProcess(toProcessSpec(currConfig))
-        }
+            return { ok: true, config }
+        },
 
-        return currConfig
-    },
-})
+        async startOrReload(appId: string) {
+            const config = await configRepository.getAppConfig(appId)
+
+            if (!config) {
+                console.error(`Failed to start app with id '${appId}': no config.`)
+                return
+            }
+
+            return processManager.startOrRestartAppProcess(toProcessSpec(config))
+        },
+
+        async updateAppConfig(appId: string, partial: Partial<AppConfig>): Promise<AppMutationResult> {
+            const current = await configRepository.getAppConfig(appId)
+
+            if (!current) {
+                return { ok: false, code: "not-found" }
+            }
+
+            if (await nameTakenByOther(partial.name, appId)) {
+                return { ok: false, code: "name-taken" }
+            }
+
+            const response = await configRepository.updateAppConfig(appId, partial)
+
+            if (!response) {
+                return { ok: false, code: "invalid" }
+            }
+
+            const [prevConfig, currConfig] = response
+
+            if (!(await processManager.getAppProcess(prevConfig.name))) {
+                return { ok: true, config: currConfig }
+            }
+
+            const decision = decideRestart(prevConfig, currConfig)
+
+            if (decision === "restart") {
+                await processManager.stopAppProcess(prevConfig.name)
+            } else if (decision === "recreate") {
+                await processManager.stopAppProcess(prevConfig.name)
+                await processManager.deleteAppProcess(prevConfig.name)
+            }
+
+            if (decision !== "none") {
+                await processManager.startAppProcess(toProcessSpec(currConfig))
+            }
+
+            return { ok: true, config: currConfig }
+        },
+
+        async deleteApp(appId: string): Promise<{ ok: true } | { ok: false; code: "not-found" }> {
+            const config = await configRepository.getAppConfig(appId)
+
+            if (!config) {
+                return { ok: false, code: "not-found" }
+            }
+
+            await processManager.stopAppProcess(config.name)
+            await processManager.deleteAppProcess(config.name)
+            await configRepository.deleteAppConfig(appId)
+            await artifactStore.deleteAppDir(appId)
+
+            return { ok: true }
+        },
+    }
+}
 
 export type AppService = ReturnType<typeof createAppService>

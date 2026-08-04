@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs"
+import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { readdir, readFile } from "node:fs/promises"
 import { join } from "node:path"
 import { parse } from "dotenv"
@@ -77,6 +77,11 @@ export const createAppConfigRepository = (appsDir: string) => ({
         writeFileSync(this.getConfigPath(appId), JSON.stringify(validation.data, null, 2))
 
         return [currentConfig, validation.data] as const
+    },
+
+    async deleteAppConfig(appId: string) {
+        rmSync(this.getConfigPath(appId), { force: true })
+        rmSync(join(appsDir, `${appId}.env`), { force: true })
     },
 
     async findAppConfigByName(name: string) {
