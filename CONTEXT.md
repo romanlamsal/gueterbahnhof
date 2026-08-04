@@ -16,6 +16,10 @@ _Avoid_: Bundle, build, package
 POSTing an artifact for a named app, causing a stop-update-start of that app. Idempotent from the caller's view: the same call creates or replaces.
 _Avoid_: Publish, upload (alone), release
 
+**Deployment**:
+A single artifact update for one app, from upload through extract and start to a terminal outcome (succeeded or failed). At most one deployment is in flight per app at a time.
+_Avoid_: Update (as a noun), rollout, release
+
 **App Config**:
 The persisted settings of an app: its name, its entry, and its env. Exists independently of whether an artifact has been deployed yet.
 _Avoid_: App settings, service config

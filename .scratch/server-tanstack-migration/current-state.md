@@ -1,6 +1,6 @@
 # Current state: express server vs. tanstack-start server
 
-Status: needs-triage
+Status: resolved
 Type: research
 
 Survey of what exists today, written to support the future migration of
@@ -78,5 +78,32 @@ Rewrite, not a port: it reimplements the domain libs from scratch and shares not
 - `entry` (legacy, domain term) vs `script` (tanstack, pm2's word) for the same concept.
 - Apps keyed by `name` (legacy) vs `id` + display `name` (tanstack).
 - `app-service.ts#createService` says "service" where everything else says "app".
+
+## Decisions (grilling session, 2026-08-04)
+
+All open questions from the survey were resolved. This list is the input for the spec.
+
+### Deploy contract
+1. Deploy stays **by name**: `POST /update/:appname`. Existing CLI + Action keep working. App names must be unique — enforce on save in the UI.
+2. **No auto-create**: unknown name → 400.
+3. **Async two-endpoint design** (see ADR-0001): upload responds 202 + `{ deploymentId }`; progress at `GET /update/:appname/status` (echoes the deployment id). Deployment lifecycle: `extracting → starting → succeeded | failed`.
+4. **409** while a deployment is in flight for the same app — at most one active per app.
+5. Deployment state **in-memory, last N per app**; 404 for unknown ids/apps after restart.
+6. CLI: **fire-and-forget by default**, `--wait` flag polls to a terminal state and exits non-zero on failure. The GitHub Action sets `wait: true`.
+
+### Server
+7. **One API key, enforced properly**: authorization header on every API route; UI login exchanges the key for a signed, verified httpOnly session cookie. (Legacy enforcement was broken — check-inside-handler and presence-only cookie guard.)
+8. **No-daemon pm2 stays** (see ADR-0002): dies together, wipe on SIGTERM. gueterbahnhof updates = downtime for all apps, accepted.
+9. Config format: per-app `<id>.json` + optional `<id>.env` sidecar (as built), but field **`script` → `entry`** (domain term; pm2's `script` only at the pm-service boundary).
+10. **Auto-migrate on boot**: detect legacy `apps.json`, mint ids, write per-app files, rename to `apps.json.migrated`.
+11. Public API: minimal **`GET /apps`** returning `{id, name, state}[]`, key-protected. Legacy `GET /status/:name` (raw pm2 describe) is dropped.
+
+### Packaging & UI
+12. server-tanstack **replaces `@gueterbahnhof/server` inside the published CLI** (`@lamsal-de/gueterbahnhof`): commander flags `--app-dir/--port/--api-key` with env fallbacks, port default 4444, env var `GUETERBAHNHOF_APP_DIR`, interactive dir prompt replaced by create-or-fail-fast.
+13. UI status via **SSE from the pm2 event bus** (app-state-service gets its consumer), plus derived **"no artifact"** state when the app dir is missing (legacy `no-entry` equivalent).
+14. **Delete = full cleanup**: stop+delete pm2 process, delete config + env sidecar + extracted app dir, confirm dialog in UI.
+15. `common/App.ts` deleted (dead reverse-proxy idea, not revived); TanStack template leftovers (landing page, README, demo files, `hello-server.js`) cleaned up.
+
+Next step: `/to-spec` → `.scratch/server-tanstack-migration/spec.md`.
 
 ## Comments
