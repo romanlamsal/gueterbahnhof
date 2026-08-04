@@ -4,10 +4,10 @@
 
 **Blocked by:** 02 — Deploy tracer bullet (app-directory knowledge for the `no artifact` derivation).
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] State derivation (process status + artifact presence → online/stopped/pending/no artifact) is a pure domain function with unit tests
-- [ ] `GET /apps` returns `{id, name, state}[]`, API-key protected when a key is set
-- [ ] SSE endpoint streams state-change events; controller test asserts the stream framing with a fake event source
-- [ ] UI list reflects a state change without a manual refresh and shows `no artifact` distinctly
-- [ ] Deploying an artifact to a `no artifact` app flips its state live once started
+- [x] State derivation (process status + artifact presence → online/stopped/pending/no artifact) is a pure domain function with unit tests
+- [x] `GET /apps` returns `{id, name, state}[]`, API-key protected when a key is set
+- [x] SSE endpoint streams state-change events; controller test asserts the stream framing with a fake event source
+- [x] UI list reflects a state change without a manual refresh and shows `no artifact` distinctly
+- [x] Deploying an artifact to a `no artifact` app flips its state live once started

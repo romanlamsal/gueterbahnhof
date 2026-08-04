@@ -48,6 +48,7 @@ const makeFakes = (initialConfigs: AppConfig[] = [], { processExists = true } = 
     const artifactStore = {
         getAppDir: (appId: string) => `/apps/${appId}`,
         deleteAppDir: vi.fn(async () => {}),
+        hasArtifact: vi.fn(() => true),
     }
 
     const service = createAppService({
@@ -146,6 +147,20 @@ describe("appService.createApp", () => {
         const { service } = makeFakes([baseConfig])
 
         expect(await service.createApp("id-9", "my-app")).toEqual({ ok: false, code: "name-taken" })
+    })
+})
+
+describe("appService.listApps", () => {
+    it("derives each app's state from process status and artifact presence", async () => {
+        const { service, artifactStore } = makeFakes([baseConfig, { id: "id-2", name: "empty-app", env: {} }])
+        artifactStore.hasArtifact.mockImplementation(((appId: string) => appId === "id-1") as never)
+
+        const apps = await service.listApps()
+
+        expect(apps).toEqual([
+            { config: expect.objectContaining({ id: "id-1" }), state: "online" },
+            { config: expect.objectContaining({ id: "id-2" }), state: "no-artifact" },
+        ])
     })
 })
 

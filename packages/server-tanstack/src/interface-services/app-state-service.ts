@@ -4,7 +4,9 @@ import { createTypedEventEmitter } from "@/kit/typed-event-emitter.ts"
 
 const AppStateDataSchema = z.object({
     appName: z.string(),
-    status: z.enum(["online", "stopped", "pending"]).default("pending"),
+    // Raw pm2 status — consumers treat events as refetch triggers, so any
+    // status string is worth forwarding.
+    status: z.string().default("pending"),
 })
 
 const AppStateEventSchema = AppStateDataSchema.extend({

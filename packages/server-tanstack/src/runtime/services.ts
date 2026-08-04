@@ -2,9 +2,12 @@ import { join } from "node:path"
 import { createAppService } from "@/app-services/app-service.ts"
 import { createAuthService } from "@/app-services/auth-service.ts"
 import { createDeploymentService } from "@/app-services/deployment-service.ts"
+import { createAppsController } from "@/controllers/apps-controller.ts"
 import { createAuthController } from "@/controllers/auth-controller.ts"
 import { createDeployController } from "@/controllers/deploy-controller.ts"
+import { createEventsController } from "@/controllers/events-controller.ts"
 import { createAppConfigRepository } from "@/interface-services/app-config-repository.ts"
+import { appStateService } from "@/interface-services/app-state-service.ts"
 import { createArtifactStore } from "@/interface-services/artifact-store.ts"
 import { pm2Service } from "@/interface-services/pm-service.ts"
 import { createSessionSigner } from "@/interface-services/session-signer.ts"
@@ -56,6 +59,18 @@ export const getDeployController = () => {
 
 let authService: ReturnType<typeof createAuthService> | undefined
 let authController: ReturnType<typeof createAuthController> | undefined
+let appsController: ReturnType<typeof createAppsController> | undefined
+let eventsController: ReturnType<typeof createEventsController> | undefined
+
+export const getAppsController = () => {
+    appsController ??= createAppsController({ appService: getAppService() })
+    return appsController
+}
+
+export const getEventsController = () => {
+    eventsController ??= createEventsController({ appStateEvents: appStateService })
+    return eventsController
+}
 
 export const getAuthService = () => {
     authService ??= createAuthService({

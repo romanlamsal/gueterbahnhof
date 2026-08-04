@@ -1,4 +1,5 @@
 import { decideRestart } from "@/domain/app-config-change.ts"
+import { deriveAppState } from "@/domain/app-state.ts"
 import type { AppConfig, AppConfigRepository } from "@/interface-services/app-config-repository.ts"
 import type { ArtifactStore } from "@/interface-services/artifact-store.ts"
 import type { AppProcessSpec, ProcessManager } from "@/interface-services/pm-service.ts"
@@ -14,7 +15,7 @@ export const createAppService = ({
 }: {
     configRepository: AppConfigRepository
     processManager: ProcessManager
-    artifactStore: Pick<ArtifactStore, "getAppDir" | "deleteAppDir">
+    artifactStore: Pick<ArtifactStore, "getAppDir" | "deleteAppDir" | "hasArtifact">
 }) => {
     const toProcessSpec = (config: AppConfig): AppProcessSpec => ({
         name: config.name,
@@ -55,12 +56,16 @@ export const createAppService = ({
             const configs = await configRepository.listAppConfigs()
 
             return Promise.all(
-                configs.map(async config => ({
-                    config,
-                    status: await processManager
+                configs.map(async config => {
+                    const processStatus = await processManager
                         .getAppProcess(config.name)
-                        .then(procDescription => procDescription?.pm2_env?.status ?? "unknown"),
-                })),
+                        .then(procDescription => procDescription?.pm2_env?.status)
+
+                    return {
+                        config,
+                        state: deriveAppState(processStatus, artifactStore.hasArtifact(config.id)),
+                    }
+                }),
             )
         },
 

@@ -1,9 +1,24 @@
-import { useMutation, useSuspenseQuery } from "@tanstack/react-query"
+import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query"
 import { createFileRoute, Outlet, redirect, useNavigate } from "@tanstack/react-router"
-import { Suspense } from "react"
+import { Suspense, useEffect } from "react"
 import { Button } from "@/components/ui/button.tsx"
+import type { AppState } from "@/domain/app-state.ts"
 import { getSessionStatusFunc } from "@/routes/ui/-lib/auth-funcs.ts"
 import { createAppFunc, loadAppsFunc } from "@/routes/ui/-lib/server-funcs.ts"
+
+const stateBadgeClasses: Record<AppState, string> = {
+    online: "bg-green-500",
+    stopped: "bg-red-500",
+    pending: "bg-yellow-500",
+    "no-artifact": "bg-gray-400",
+}
+
+const stateLabels: Record<AppState, string> = {
+    online: "online",
+    stopped: "stopped",
+    pending: "pending",
+    "no-artifact": "no artifact",
+}
 
 export const Route = createFileRoute("/ui")({
     component: RouteComponent,
@@ -21,6 +36,17 @@ function RouteComponent() {
         queryKey: ["apps"],
         queryFn: () => loadAppsFunc(),
     })
+
+    const queryClient = useQueryClient()
+    useEffect(() => {
+        const events = new EventSource("/ui/events")
+
+        events.onmessage = () => {
+            queryClient.invalidateQueries({ queryKey: ["apps"] })
+        }
+
+        return () => events.close()
+    }, [queryClient])
 
     const navigate = useNavigate()
     const { mutate: addAppMutation } = useMutation({
@@ -44,8 +70,16 @@ function RouteComponent() {
                         onClick={() =>
                             navigate({ to: "/ui/$appId", params: { appId: app.config.id } })
                         }
+                        className={"justify-start gap-2"}
+                        title={stateLabels[app.state]}
                     >
+                        <span
+                            className={`inline-block size-2 shrink-0 rounded-full ${stateBadgeClasses[app.state]}`}
+                        />
                         {app.config.name}
+                        {app.state === "no-artifact" ? (
+                            <span className={"text-xs text-gray-400"}>(no artifact)</span>
+                        ) : null}
                     </Button>
                 ))}
             </aside>

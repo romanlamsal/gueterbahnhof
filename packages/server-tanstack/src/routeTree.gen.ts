@@ -10,8 +10,10 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as AppsRouteImport } from './routes/apps'
 import { Route as UiRouteRouteImport } from './routes/ui/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as UiEventsRouteImport } from './routes/ui/events'
 import { Route as UpdateAppNameRouteRouteImport } from './routes/update/$appName/route'
 import { Route as UiAppIdRouteRouteImport } from './routes/ui/$appId/route'
 import { Route as UpdateAppNameStatusRouteImport } from './routes/update/$appName/status'
@@ -19,6 +21,11 @@ import { Route as UpdateAppNameStatusRouteImport } from './routes/update/$appNam
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppsRoute = AppsRouteImport.update({
+  id: '/apps',
+  path: '/apps',
   getParentRoute: () => rootRouteImport,
 } as any)
 const UiRouteRoute = UiRouteRouteImport.update({
@@ -30,6 +37,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const UiEventsRoute = UiEventsRouteImport.update({
+  id: '/events',
+  path: '/events',
+  getParentRoute: () => UiRouteRoute,
 } as any)
 const UpdateAppNameRouteRoute = UpdateAppNameRouteRouteImport.update({
   id: '/update/$appName',
@@ -50,26 +62,32 @@ const UpdateAppNameStatusRoute = UpdateAppNameStatusRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/ui': typeof UiRouteRouteWithChildren
+  '/apps': typeof AppsRoute
   '/login': typeof LoginRoute
   '/ui/$appId': typeof UiAppIdRouteRoute
   '/update/$appName': typeof UpdateAppNameRouteRouteWithChildren
+  '/ui/events': typeof UiEventsRoute
   '/update/$appName/status': typeof UpdateAppNameStatusRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/ui': typeof UiRouteRouteWithChildren
+  '/apps': typeof AppsRoute
   '/login': typeof LoginRoute
   '/ui/$appId': typeof UiAppIdRouteRoute
   '/update/$appName': typeof UpdateAppNameRouteRouteWithChildren
+  '/ui/events': typeof UiEventsRoute
   '/update/$appName/status': typeof UpdateAppNameStatusRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/ui': typeof UiRouteRouteWithChildren
+  '/apps': typeof AppsRoute
   '/login': typeof LoginRoute
   '/ui/$appId': typeof UiAppIdRouteRoute
   '/update/$appName': typeof UpdateAppNameRouteRouteWithChildren
+  '/ui/events': typeof UiEventsRoute
   '/update/$appName/status': typeof UpdateAppNameStatusRoute
 }
 export interface FileRouteTypes {
@@ -77,31 +95,38 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/ui'
+    | '/apps'
     | '/login'
     | '/ui/$appId'
     | '/update/$appName'
+    | '/ui/events'
     | '/update/$appName/status'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/ui'
+    | '/apps'
     | '/login'
     | '/ui/$appId'
     | '/update/$appName'
+    | '/ui/events'
     | '/update/$appName/status'
   id:
     | '__root__'
     | '/'
     | '/ui'
+    | '/apps'
     | '/login'
     | '/ui/$appId'
     | '/update/$appName'
+    | '/ui/events'
     | '/update/$appName/status'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   UiRouteRoute: typeof UiRouteRouteWithChildren
+  AppsRoute: typeof AppsRoute
   LoginRoute: typeof LoginRoute
   UpdateAppNameRouteRoute: typeof UpdateAppNameRouteRouteWithChildren
 }
@@ -113,6 +138,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/apps': {
+      id: '/apps'
+      path: '/apps'
+      fullPath: '/apps'
+      preLoaderRoute: typeof AppsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/ui': {
@@ -128,6 +160,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/ui/events': {
+      id: '/ui/events'
+      path: '/events'
+      fullPath: '/ui/events'
+      preLoaderRoute: typeof UiEventsRouteImport
+      parentRoute: typeof UiRouteRoute
     }
     '/update/$appName': {
       id: '/update/$appName'
@@ -155,10 +194,12 @@ declare module '@tanstack/react-router' {
 
 interface UiRouteRouteChildren {
   UiAppIdRouteRoute: typeof UiAppIdRouteRoute
+  UiEventsRoute: typeof UiEventsRoute
 }
 
 const UiRouteRouteChildren: UiRouteRouteChildren = {
   UiAppIdRouteRoute: UiAppIdRouteRoute,
+  UiEventsRoute: UiEventsRoute,
 }
 
 const UiRouteRouteWithChildren =
@@ -178,6 +219,7 @@ const UpdateAppNameRouteRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   UiRouteRoute: UiRouteRouteWithChildren,
+  AppsRoute: AppsRoute,
   LoginRoute: LoginRoute,
   UpdateAppNameRouteRoute: UpdateAppNameRouteRouteWithChildren,
 }
