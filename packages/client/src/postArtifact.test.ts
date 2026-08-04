@@ -124,7 +124,7 @@ describe("waitForDeployment", () => {
 
         expect(result.state).toBe("succeeded")
         expect(stub.seen.length).toBeGreaterThanOrEqual(3)
-        expect(stub.seen[0]).toMatchObject({ url: "/update/my-app/status", authorization: "key-1" })
+        expect(stub.seen[0]).toMatchObject({ url: "/update/my-app/status?deploymentId=dep-1", authorization: "key-1" })
     })
 
     it("reports failure with the reason", async () => {
@@ -142,8 +142,35 @@ describe("waitForDeployment", () => {
         expect(result).toMatchObject({ state: "failed", reason: "The process failed to start." })
     })
 
-    it("reports 'superseded' when the latest deployment is someone else's", async () => {
+    it("polls with its own deployment id", async () => {
+        const stub = await statusSequence([{ deploymentId: "dep-1", state: "succeeded" }])
+        server = stub.server
+
+        await waitForDeployment({ appName: "my-app", host: stub.host }, "dep-1", {
+            pollIntervalMs: 5,
+            timeoutMs: 5_000,
+        })
+
+        expect(stub.seen[0]?.url).toBe("/update/my-app/status?deploymentId=dep-1")
+    })
+
+    it("reports 'superseded' when a server without id support answers with someone else's deployment", async () => {
         const stub = await statusSequence([{ deploymentId: "dep-other", state: "extracting" }])
+        server = stub.server
+
+        const result = await waitForDeployment({ appName: "my-app", host: stub.host }, "dep-1", {
+            pollIntervalMs: 5,
+            timeoutMs: 5_000,
+        })
+
+        expect(result.state).toBe("superseded")
+    })
+
+    it("reports 'superseded' when the record was evicted (404)", async () => {
+        const stub = await startStubServer((_req, res) => {
+            res.writeHead(404, { "content-type": "application/json" })
+            res.end(JSON.stringify({ error: "No deployment found." }))
+        })
         server = stub.server
 
         const result = await waitForDeployment({ appName: "my-app", host: stub.host }, "dep-1", {

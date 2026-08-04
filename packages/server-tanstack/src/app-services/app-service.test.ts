@@ -89,12 +89,13 @@ describe("appService.updateAppConfig", () => {
         })
     })
 
-    it("stops the OLD process name on a rename", async () => {
+    it("stops AND deletes the OLD process name on a rename, so no stray entry survives", async () => {
         const { service, processManager } = makeFakes([baseConfig])
 
         await service.updateAppConfig("id-1", { name: "renamed" })
 
         expect(processManager.stopAppProcess).toHaveBeenCalledWith("my-app")
+        expect(processManager.deleteAppProcess).toHaveBeenCalledWith("my-app")
         expect(processManager.startAppProcess).toHaveBeenCalledWith(expect.objectContaining({ name: "renamed" }))
     })
 

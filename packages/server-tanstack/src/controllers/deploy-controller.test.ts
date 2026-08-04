@@ -40,7 +40,7 @@ describe("deploy controller: POST /update/:appname", () => {
         })
 
         const controller = createDeployController({
-            deploymentService: { requestDeployment, getLatestDeployment: vi.fn() },
+            deploymentService: { requestDeployment, getLatestDeployment: vi.fn(), listDeployments: vi.fn(() => []) },
         })
 
         const response = await controller.postUpdate(deployRequest(), "my-app")
@@ -53,7 +53,7 @@ describe("deploy controller: POST /update/:appname", () => {
     it("responds 400 when the body is not multipart", async () => {
         const requestDeployment = vi.fn()
         const controller = createDeployController({
-            deploymentService: { requestDeployment, getLatestDeployment: vi.fn() },
+            deploymentService: { requestDeployment, getLatestDeployment: vi.fn(), listDeployments: vi.fn(() => []) },
         })
 
         const response = await controller.postUpdate(
@@ -71,7 +71,7 @@ describe("deploy controller: POST /update/:appname", () => {
 
         const requestDeployment = vi.fn()
         const controller = createDeployController({
-            deploymentService: { requestDeployment, getLatestDeployment: vi.fn() },
+            deploymentService: { requestDeployment, getLatestDeployment: vi.fn(), listDeployments: vi.fn(() => []) },
         })
 
         const response = await controller.postUpdate(
@@ -93,6 +93,7 @@ describe("deploy controller: POST /update/:appname", () => {
                     return { ok: false, code: "unknown-app" }
                 }),
                 getLatestDeployment: vi.fn(),
+                listDeployments: vi.fn(() => []),
             },
         })
 
@@ -112,6 +113,7 @@ describe("deploy controller: POST /update/:appname", () => {
                     return { ok: false, code: "conflict", deploymentId: "dep-active" }
                 }),
                 getLatestDeployment: vi.fn(),
+                listDeployments: vi.fn(() => []),
             },
         })
 
@@ -126,7 +128,11 @@ describe("deploy controller: POST /update/:appname", () => {
 describe("deploy controller: GET /update/:appname/status", () => {
     it("responds 404 when the app has no deployment", async () => {
         const controller = createDeployController({
-            deploymentService: { requestDeployment: vi.fn(), getLatestDeployment: vi.fn(() => undefined) },
+            deploymentService: {
+                requestDeployment: vi.fn(),
+                getLatestDeployment: vi.fn(() => undefined),
+                listDeployments: vi.fn(() => []),
+            },
         })
 
         const response = await controller.getStatus("my-app")
@@ -141,6 +147,7 @@ describe("deploy controller: GET /update/:appname/status", () => {
                 getLatestDeployment: vi.fn(
                     (): Deployment => ({ id: "dep-1", appName: "my-app", state: "failed", reason: "boom" }),
                 ),
+                listDeployments: vi.fn(() => []),
             },
         })
 
@@ -148,5 +155,40 @@ describe("deploy controller: GET /update/:appname/status", () => {
 
         expect(response.status).toBe(200)
         expect(await response.json()).toEqual({ deploymentId: "dep-1", state: "failed", reason: "boom" })
+    })
+
+    it("resolves a specific deployment id from the retained records", async () => {
+        const records: Deployment[] = [
+            { id: "dep-1", appName: "my-app", state: "succeeded" },
+            { id: "dep-2", appName: "my-app", state: "extracting" },
+        ]
+        const controller = createDeployController({
+            deploymentService: {
+                requestDeployment: vi.fn(),
+                getLatestDeployment: vi.fn(() => records.at(-1)),
+                listDeployments: vi.fn(() => records),
+            },
+        })
+
+        const response = await controller.getStatus("my-app", "dep-1")
+
+        expect(response.status).toBe(200)
+        expect(await response.json()).toEqual({ deploymentId: "dep-1", state: "succeeded" })
+    })
+
+    it("responds 404 for an evicted/unknown deployment id", async () => {
+        const controller = createDeployController({
+            deploymentService: {
+                requestDeployment: vi.fn(),
+                getLatestDeployment: vi.fn(
+                    (): Deployment => ({ id: "dep-9", appName: "my-app", state: "succeeded" }),
+                ),
+                listDeployments: vi.fn((): Deployment[] => [{ id: "dep-9", appName: "my-app", state: "succeeded" }]),
+            },
+        })
+
+        const response = await controller.getStatus("my-app", "dep-1")
+
+        expect(response.status).toBe(404)
     })
 })

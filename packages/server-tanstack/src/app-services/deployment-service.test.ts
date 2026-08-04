@@ -6,12 +6,15 @@ const makeFakes = ({
     configs = [{ id: "id-1", name: "my-app", entry: "index.js", env: { FOO: "bar" } }],
     extract = vi.fn(async () => "/extracted/id-1"),
     start = vi.fn(async () => ({}) as unknown),
+    processRunning = true,
 }: {
     configs?: AppConfig[]
     extract?: ReturnType<typeof vi.fn>
     start?: ReturnType<typeof vi.fn>
+    processRunning?: boolean
 } = {}) => {
     let nextId = 0
+    const calls: string[] = []
 
     const deps = {
         configRepository: {
@@ -19,20 +22,37 @@ const makeFakes = ({
         },
         artifactStore: {
             getAppDir: (appId: string) => `/apps/${appId}`,
-            extractArtifact: extract,
+            extractArtifact: vi.fn(async (...args: unknown[]) => {
+                calls.push("extract")
+                return extract(...args)
+            }),
         },
         processManager: {
-            startOrRestartAppProcess: start,
+            getAppProcess: vi.fn(async () => (processRunning ? {} : undefined)),
+            stopAppProcess: vi.fn(async () => {
+                calls.push("stop")
+                return {}
+            }),
+            startAppProcess: vi.fn(async (...args: unknown[]) => {
+                calls.push("start")
+                return start(...args)
+            }),
         },
         generateId: () => `dep-${++nextId}`,
     }
 
-    return { deps: deps as unknown as Parameters<typeof createDeploymentService>[0], extract, start }
+    return {
+        deps: deps as unknown as Parameters<typeof createDeploymentService>[0],
+        extract: deps.artifactStore.extractArtifact,
+        start: deps.processManager.startAppProcess,
+        rawStart: start,
+        calls,
+    }
 }
 
 describe("deploymentService", () => {
-    it("runs a deployment to 'succeeded': extract, then start with the app dir as cwd", async () => {
-        const { deps, extract, start } = makeFakes()
+    it("runs a deployment to 'succeeded': stop, then extract, then start with the app dir as cwd", async () => {
+        const { deps, extract, start, calls } = makeFakes()
         const service = createDeploymentService(deps)
 
         const result = await service.requestDeployment("my-app", "/tmp/upload.zip")
@@ -45,6 +65,8 @@ describe("deploymentService", () => {
         const deployment = await result.completed
         expect(deployment.state).toBe("succeeded")
 
+        // stop-update-start: never extract underneath a running process
+        expect(calls).toEqual(["stop", "extract", "start"])
         expect(extract).toHaveBeenCalledWith("id-1", "/tmp/upload.zip")
         expect(start).toHaveBeenCalledWith({
             name: "my-app",
@@ -52,6 +74,19 @@ describe("deploymentService", () => {
             env: { FOO: "bar" },
             cwd: "/apps/id-1",
         })
+    })
+
+    it("skips the stop when no process is running", async () => {
+        const { deps, calls } = makeFakes({ processRunning: false })
+        const service = createDeploymentService(deps)
+
+        const result = await service.requestDeployment("my-app", "/tmp/upload.zip")
+        if (!result.ok) {
+            throw new Error("unreachable")
+        }
+        await result.completed
+
+        expect(calls).toEqual(["extract", "start"])
     })
 
     it("rejects a deployment for an unknown app name", async () => {
@@ -94,6 +129,7 @@ describe("deploymentService", () => {
         if (!first.ok) {
             throw new Error("unreachable")
         }
+        await vi.waitFor(() => expect(blockedExtract).toHaveBeenCalledTimes(1))
 
         const second = await service.requestDeployment("my-app", "/tmp/two.zip")
         expect(second).toEqual({ ok: false, code: "conflict", deploymentId: "dep-1" })
@@ -104,6 +140,7 @@ describe("deploymentService", () => {
         const third = await service.requestDeployment("my-app", "/tmp/three.zip")
         expect(third).toMatchObject({ ok: true, deploymentId: "dep-2" })
         if (third.ok) {
+            await vi.waitFor(() => expect(blockedExtract).toHaveBeenCalledTimes(2))
             releaseExtract()
             await third.completed
         }
@@ -191,6 +228,7 @@ describe("deploymentService", () => {
 
         expect(service.getLatestDeployment("my-app")?.state).toBe("extracting")
 
+        await vi.waitFor(() => expect(blockedExtract).toHaveBeenCalled())
         releaseExtract()
         await result.completed
         expect(service.getLatestDeployment("my-app")?.state).toBe("succeeded")

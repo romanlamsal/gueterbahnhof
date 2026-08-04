@@ -10,7 +10,9 @@ export const Route = createFileRoute("/update/$appName/status")({
                     return denied
                 }
 
-                return getDeployController().getStatus(params.appName)
+                const deploymentId = new URL(request.url).searchParams.get("deploymentId") ?? undefined
+
+                return getDeployController().getStatus(params.appName, deploymentId)
             },
         },
     },

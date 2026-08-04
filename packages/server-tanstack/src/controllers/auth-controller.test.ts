@@ -44,6 +44,30 @@ describe("auth controller: API key", () => {
     })
 })
 
+describe("auth controller: API key or session", () => {
+    it("accepts the key header, a valid session cookie, and rejects neither", async () => {
+        const { controller, authService } = makeController("s3cret")
+
+        expect(
+            controller.requireApiKeyOrSession(
+                new Request("http://localhost/update/my-app", { headers: { authorization: "s3cret" } }),
+            ),
+        ).toBeUndefined()
+
+        const token = authService.login("s3cret") ?? ""
+        expect(
+            controller.requireApiKeyOrSession(
+                new Request("http://localhost/update/my-app", {
+                    headers: { cookie: `${AUTH_COOKIE}=${encodeURIComponent(token)}` },
+                }),
+            ),
+        ).toBeUndefined()
+
+        const denied = controller.requireApiKeyOrSession(new Request("http://localhost/update/my-app"))
+        expect(denied?.status).toBe(401)
+    })
+})
+
 describe("auth controller: UI session", () => {
     it("redirects to login (with a redirect target) when there is no session", () => {
         const { controller } = makeController("s3cret")

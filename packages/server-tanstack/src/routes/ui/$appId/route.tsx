@@ -72,7 +72,14 @@ const DotenvTextarea = ({
                         ev.currentTarget.value
                             .split("\n")
                             .map(line => {
-                                const [key, value] = line.split("=")
+                                const eqIndex = line.indexOf("=")
+                                if (eqIndex === -1) {
+                                    return line
+                                }
+                                // split at the FIRST '=' only — values like
+                                // postgres://h/db?a=1 contain '=' themselves
+                                const key = line.slice(0, eqIndex)
+                                const value = line.slice(eqIndex + 1)
                                 return `${key}=${!escaped ? encodeURIComponent(value) : value}`
                             })
                             .join("\n"),

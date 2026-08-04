@@ -44,10 +44,6 @@ export const appStateService = {
                 appStatus.set(appStateEvent.appName, appStateEvent.status)
                 eventEmitter.emit(appStateEvent)
             })
-
-            /*this.addListener((appName, nextState) =>
-                console.log(`[AppState] ${appName}: ${nextState}`),
-            )*/
         })
     },
 

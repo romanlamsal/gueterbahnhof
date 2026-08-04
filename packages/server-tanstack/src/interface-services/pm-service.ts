@@ -20,6 +20,17 @@ const toStartOptions = (spec: AppProcessSpec): StartOptions => ({
     env: spec.env,
 })
 
+// Shared config -> process-spec mapping: the app runs inside its app dir.
+export const toProcessSpec = (
+    config: { name: string; entry?: string; env?: Record<string, string> },
+    appDir: string,
+): AppProcessSpec => ({
+    name: config.name,
+    entry: config.entry,
+    env: config.env,
+    cwd: appDir,
+})
+
 export const pm2Service = {
     getAppProcess(appName: string) {
         return new Promise<ProcessDescription | undefined>(resolve => {

@@ -1,13 +1,8 @@
 import { randomUUID } from "node:crypto"
-import {
-    canStartDeployment,
-    createDeployment,
-    type Deployment,
-    transitionDeployment,
-} from "@/domain/deployment.ts"
+import { createDeployment, type Deployment, isInFlight, transitionDeployment } from "@/domain/deployment.ts"
 import type { AppConfig, AppConfigRepository } from "@/interface-services/app-config-repository.ts"
 import type { ArtifactStore } from "@/interface-services/artifact-store.ts"
-import type { ProcessManager } from "@/interface-services/pm-service.ts"
+import { type ProcessManager, toProcessSpec } from "@/interface-services/pm-service.ts"
 
 // Deployment records are in-memory only, capped per app (ADR-0001).
 const MAX_DEPLOYMENTS_PER_APP = 5
@@ -25,7 +20,7 @@ export const createDeploymentService = ({
 }: {
     configRepository: Pick<AppConfigRepository, "findAppConfigByName">
     artifactStore: Pick<ArtifactStore, "getAppDir" | "extractArtifact">
-    processManager: Pick<ProcessManager, "startOrRestartAppProcess">
+    processManager: Pick<ProcessManager, "getAppProcess" | "stopAppProcess" | "startAppProcess">
     generateId?: () => string
 }) => {
     const deploymentsByApp = new Map<string, Deployment[]>()
@@ -52,6 +47,12 @@ export const createDeploymentService = ({
     const runDeployment = async (deployment: Deployment, config: AppConfig, zipFilePath: string) => {
         let current = deployment
 
+        // Stop-update-start, in that order: never replace the app directory
+        // underneath a running process.
+        if (await processManager.getAppProcess(config.name)) {
+            await processManager.stopAppProcess(config.name)
+        }
+
         try {
             await artifactStore.extractArtifact(config.id, zipFilePath)
         } catch (error) {
@@ -65,12 +66,7 @@ export const createDeploymentService = ({
             return transition(current, "failed", "No entry configured.")
         }
 
-        const proc = await processManager.startOrRestartAppProcess({
-            name: config.name,
-            entry: config.entry,
-            env: config.env,
-            cwd: artifactStore.getAppDir(config.id),
-        })
+        const proc = await processManager.startAppProcess(toProcessSpec(config, artifactStore.getAppDir(config.id)))
 
         if (!proc) {
             return transition(current, "failed", "The process failed to start.")
@@ -96,8 +92,8 @@ export const createDeploymentService = ({
             }
 
             const active = this.getLatestDeployment(appName)
-            if (!canStartDeployment(active)) {
-                return { ok: false, code: "conflict", deploymentId: (active as Deployment).id }
+            if (isInFlight(active)) {
+                return { ok: false, code: "conflict", deploymentId: active.id }
             }
 
             const deployment = record(createDeployment(generateId(), appName))

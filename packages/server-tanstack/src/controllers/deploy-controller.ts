@@ -5,7 +5,7 @@ import { saveArtifactUpload } from "./artifact-upload.ts"
 export const createDeployController = ({
     deploymentService,
 }: {
-    deploymentService: Pick<DeploymentService, "requestDeployment" | "getLatestDeployment">
+    deploymentService: Pick<DeploymentService, "requestDeployment" | "getLatestDeployment" | "listDeployments">
 }) => ({
     async postUpdate(request: Request, appName: string): Promise<Response> {
         const zipFilePath = await saveArtifactUpload(request).catch(error => {
@@ -38,8 +38,12 @@ export const createDeployController = ({
         return Response.json({ deploymentId: result.deploymentId }, { status: 202 })
     },
 
-    async getStatus(appName: string): Promise<Response> {
-        const deployment = deploymentService.getLatestDeployment(appName)
+    // With ?deploymentId= a waiter gets ITS deployment as long as the record
+    // is retained — a later deploy can no longer shadow the outcome.
+    async getStatus(appName: string, deploymentId?: string): Promise<Response> {
+        const deployment = deploymentId
+            ? deploymentService.listDeployments(appName).find(candidate => candidate.id === deploymentId)
+            : deploymentService.getLatestDeployment(appName)
 
         if (!deployment) {
             return Response.json({ error: `No deployment found for app '${appName}'.` }, { status: 404 })

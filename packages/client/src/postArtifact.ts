@@ -46,22 +46,41 @@ export async function waitForDeployment(
 ): Promise<DeploymentOutcome> {
     const deadline = Date.now() + timeoutMs
 
+    // Poll by our own deployment id so a later deploy cannot shadow the
+    // outcome; the server keeps recent records per app.
+    const statusUrl = `${host}/update/${appName}/status${deploymentId ? `?deploymentId=${deploymentId}` : ""}`
+
     while (Date.now() < deadline) {
-        const status = await got(`${host}/update/${appName}/status`, {
+        const response = await got(statusUrl, {
             headers: { authorization: apiKey },
-        })
-            .json<{ deploymentId: string; state: string; reason?: string }>()
-            .catch(() => undefined)
+            throwHttpErrors: false,
+        }).catch(() => undefined)
 
-        if (status) {
-            // At most one deployment is in flight per app, so a different id
-            // means ours has been superseded by a later deploy.
-            if (deploymentId && status.deploymentId !== deploymentId) {
-                return { state: "superseded" }
-            }
+        // 404 with an id means our record was evicted by newer deployments —
+        // the outcome is unknowable, report it distinctly.
+        if (response?.statusCode === 404 && deploymentId) {
+            return { state: "superseded" }
+        }
 
-            if (status.state === "succeeded" || status.state === "failed") {
-                return { state: status.state, reason: status.reason }
+        if (response?.statusCode === 200) {
+            const status = (() => {
+                try {
+                    return JSON.parse(response.body) as { deploymentId: string; state: string; reason?: string }
+                } catch {
+                    return undefined
+                }
+            })()
+
+            if (status) {
+                // A server that ignores the id param (or a legacy one) may
+                // answer with someone else's deployment.
+                if (deploymentId && status.deploymentId !== deploymentId) {
+                    return { state: "superseded" }
+                }
+
+                if (status.state === "succeeded" || status.state === "failed") {
+                    return { state: status.state, reason: status.reason }
+                }
             }
         }
 

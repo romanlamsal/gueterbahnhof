@@ -1,12 +1,22 @@
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, redirect } from "@tanstack/react-router"
+import { getSessionStatusFunc } from "@/routes/ui/-lib/auth-funcs.ts"
 import { getAuthController, getDeployController } from "@/runtime/services.ts"
 
 export const Route = createFileRoute("/update/$appName")({
     component: UpdateAppArtifactPage,
+    beforeLoad: async ({ location }) => {
+        const { authed } = await getSessionStatusFunc()
+
+        if (!authed) {
+            throw redirect({ to: "/login", search: { redirect: location.href } })
+        }
+    },
     server: {
         handlers: {
             POST({ request, params }) {
-                const denied = getAuthController().requireApiKey(request)
+                // CLI deploys send the key header; the upload form below rides
+                // on the UI session cookie.
+                const denied = getAuthController().requireApiKeyOrSession(request)
                 if (denied) {
                     return denied
                 }

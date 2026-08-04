@@ -2,7 +2,7 @@ import { decideRestart } from "@/domain/app-config-change.ts"
 import { deriveAppState } from "@/domain/app-state.ts"
 import type { AppConfig, AppConfigRepository } from "@/interface-services/app-config-repository.ts"
 import type { ArtifactStore } from "@/interface-services/artifact-store.ts"
-import type { AppProcessSpec, ProcessManager } from "@/interface-services/pm-service.ts"
+import { type ProcessManager, toProcessSpec } from "@/interface-services/pm-service.ts"
 
 export type AppMutationResult =
     | { ok: true; config: AppConfig }
@@ -17,12 +17,7 @@ export const createAppService = ({
     processManager: ProcessManager
     artifactStore: Pick<ArtifactStore, "getAppDir" | "deleteAppDir" | "hasArtifact">
 }) => {
-    const toProcessSpec = (config: AppConfig): AppProcessSpec => ({
-        name: config.name,
-        entry: config.entry,
-        env: config.env,
-        cwd: artifactStore.getAppDir(config.id),
-    })
+    const specFor = (config: AppConfig) => toProcessSpec(config, artifactStore.getAppDir(config.id))
 
     const nameTakenByOther = async (name: string | undefined, appId: string) => {
         if (!name) {
@@ -38,7 +33,7 @@ export const createAppService = ({
             const configs = await configRepository.listAppConfigs()
 
             const procs = await Promise.all(
-                configs.map(config => processManager.startAppProcess(toProcessSpec(config))),
+                configs.map(config => processManager.startAppProcess(specFor(config))),
             )
 
             console.log(`Started ${procs.filter(Boolean).length} of ${configs.length} apps.`)
@@ -93,7 +88,7 @@ export const createAppService = ({
                 return
             }
 
-            return processManager.startOrRestartAppProcess(toProcessSpec(config))
+            return processManager.startOrRestartAppProcess(specFor(config))
         },
 
         async updateAppConfig(appId: string, partial: Partial<AppConfig>): Promise<AppMutationResult> {
@@ -123,13 +118,19 @@ export const createAppService = ({
 
             if (decision === "restart") {
                 await processManager.stopAppProcess(prevConfig.name)
+
+                // A rename leaves the old-named pm2 entry behind forever —
+                // delete it, nothing stray (ADR-0002 spirit).
+                if (prevConfig.name !== currConfig.name) {
+                    await processManager.deleteAppProcess(prevConfig.name)
+                }
             } else if (decision === "recreate") {
                 await processManager.stopAppProcess(prevConfig.name)
                 await processManager.deleteAppProcess(prevConfig.name)
             }
 
             if (decision !== "none") {
-                await processManager.startAppProcess(toProcessSpec(currConfig))
+                await processManager.startAppProcess(specFor(currConfig))
             }
 
             return { ok: true, config: currConfig }

@@ -27,6 +27,19 @@ export const createAuthController = ({ authService }: { authService: AuthService
         return Response.json({ error: "Unauthorized." }, { status: 401 })
     },
 
+    // Deploy surface used by both the CLI (header) and the UI upload form
+    // (session cookie): either credential passes.
+    requireApiKeyOrSession(request: Request): Response | undefined {
+        const headerOk = authService.verifyApiKey(request.headers.get("authorization") ?? undefined)
+        const sessionOk = authService.verifySession(getCookieValue(request.headers.get("cookie"), AUTH_COOKIE))
+
+        if (headerOk || sessionOk) {
+            return undefined
+        }
+
+        return Response.json({ error: "Unauthorized." }, { status: 401 })
+    },
+
     // UI surface: signed session cookie, verified — not presence-checked.
     requireUiSession(request: Request): Response | undefined {
         const token = getCookieValue(request.headers.get("cookie"), AUTH_COOKIE)
