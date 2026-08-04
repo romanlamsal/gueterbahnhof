@@ -1,3 +1,4 @@
+import { rmSync } from "node:fs"
 import type { DeploymentService } from "@/app-services/deployment-service.ts"
 import { saveArtifactUpload } from "./artifact-upload.ts"
 
@@ -22,6 +23,8 @@ export const createDeployController = ({
         const result = await deploymentService.requestDeployment(appName, zipFilePath)
 
         if (!result.ok) {
+            rmSync(zipFilePath, { force: true })
+
             if (result.code === "unknown-app") {
                 return Response.json({ error: `App '${appName}' not found.` }, { status: 400 })
             }

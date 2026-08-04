@@ -84,6 +84,10 @@ export const createDeploymentService = ({
             return deploymentsByApp.get(appName)?.at(-1)
         },
 
+        listDeployments(appName: string): Deployment[] {
+            return [...(deploymentsByApp.get(appName) ?? [])]
+        },
+
         async requestDeployment(appName: string, zipFilePath: string): Promise<RequestDeploymentResult> {
             const config = await configRepository.findAppConfigByName(appName)
 

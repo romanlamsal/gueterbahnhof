@@ -4,10 +4,10 @@
 
 **Blocked by:** 02 — Deploy tracer bullet (happy path).
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Unknown app name → 400 on POST; deploy never creates an app config
-- [ ] Concurrent deploy to the same app → 409 + in-flight deployment id; at most one active Deployment per app (enforced in the domain service, unit-tested)
-- [ ] Failed start or corrupt/failing extract → status reports `failed` with a reason
-- [ ] Deployment records capped at last N per app; unknown app or forgotten id → 404 on status
-- [ ] Controller tests cover 400/409/404 status codes and failed-state response shape
+- [x] Unknown app name → 400 on POST; deploy never creates an app config
+- [x] Concurrent deploy to the same app → 409 + in-flight deployment id; at most one active Deployment per app (enforced in the domain service, unit-tested)
+- [x] Failed start or corrupt/failing extract → status reports `failed` with a reason
+- [x] Deployment records capped at last N per app; unknown app or forgotten id → 404 on status
+- [x] Controller tests cover 400/409/404 status codes and failed-state response shape

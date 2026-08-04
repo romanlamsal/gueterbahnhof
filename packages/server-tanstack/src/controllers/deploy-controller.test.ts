@@ -83,10 +83,12 @@ describe("deploy controller: POST /update/:appname", () => {
         expect(requestDeployment).not.toHaveBeenCalled()
     })
 
-    it("responds 400 for an unknown app name", async () => {
+    it("responds 400 for an unknown app name and removes the uploaded zip", async () => {
+        let seenZipFilePath = ""
         const controller = createDeployController({
             deploymentService: {
                 requestDeployment: vi.fn(async (_a, zipFilePath: string): Promise<RequestDeploymentResult> => {
+                    seenZipFilePath = zipFilePath
                     uploadedPaths.push(zipFilePath)
                     return { ok: false, code: "unknown-app" }
                 }),
@@ -97,6 +99,27 @@ describe("deploy controller: POST /update/:appname", () => {
         const response = await controller.postUpdate(deployRequest(), "ghost")
 
         expect(response.status).toBe(400)
+        expect(existsSync(seenZipFilePath)).toBe(false)
+    })
+
+    it("responds 409 with the in-flight deployment id and removes the uploaded zip", async () => {
+        let seenZipFilePath = ""
+        const controller = createDeployController({
+            deploymentService: {
+                requestDeployment: vi.fn(async (_a, zipFilePath: string): Promise<RequestDeploymentResult> => {
+                    seenZipFilePath = zipFilePath
+                    uploadedPaths.push(zipFilePath)
+                    return { ok: false, code: "conflict", deploymentId: "dep-active" }
+                }),
+                getLatestDeployment: vi.fn(),
+            },
+        })
+
+        const response = await controller.postUpdate(deployRequest(), "my-app")
+
+        expect(response.status).toBe(409)
+        expect(await response.json()).toMatchObject({ deploymentId: "dep-active" })
+        expect(existsSync(seenZipFilePath)).toBe(false)
     })
 })
 
