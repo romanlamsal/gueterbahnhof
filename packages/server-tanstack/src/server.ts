@@ -25,8 +25,11 @@ await getPm().then(async () => {
 })
 
 // Dies-together lifecycle (ADR-0002): wipe managed processes exactly once.
+// pm2's in-process daemon installs its own SIGTERM/SIGINT handlers that exit
+// synchronously and would preempt the wipe — remove them, we own shutdown.
 let wipePromise: Promise<void> | undefined
 for (const signal of ["SIGTERM", "SIGINT"] as const) {
+    process.removeAllListeners(signal)
     process.on(signal, () => {
         console.log(`Received ${signal}, shutting down.`)
 

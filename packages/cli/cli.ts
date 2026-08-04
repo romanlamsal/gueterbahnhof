@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
-import { program } from "commander"
-import createServerCommand from "@gueterbahnhof/server/cli"
-import clientCommand from "@gueterbahnhof/client/cli"
 import { existsSync, readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
+import clientCommand from "@gueterbahnhof/client/cli"
+import { program } from "commander"
+import createServerCommand from "./server-command.js"
 
 function getPackageJson() {
     for (const relativePath of ["../package.json", "./package.json"]) {

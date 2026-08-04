@@ -4,10 +4,10 @@
 
 **Blocked by:** 02 — Deploy tracer bullet; 04 — Auth done right; 08 — Boot, shutdown & legacy auto-migration.
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] `gueterbahnhof server --app-dir <dir>` starts the tanstack server on port 4444 by default; flags and env fallbacks match legacy names
-- [ ] The published package is self-contained: built server + static assets included, no dev-time tooling required at runtime
-- [ ] Deploy + status + UI all reachable through the packaged server (smoke-verifiable locally via the built package)
-- [ ] `deploy` subcommand still works from the same bin
-- [ ] Version output still reported from the package metadata
+- [x] `gueterbahnhof server --app-dir <dir>` starts the tanstack server on port 4444 by default; flags and env fallbacks match legacy names
+- [x] The published package is self-contained: built server + static assets included, no dev-time tooling required at runtime
+- [x] Deploy + status + UI all reachable through the packaged server (smoke-verifiable locally via the built package)
+- [x] `deploy` subcommand still works from the same bin
+- [x] Version output still reported from the package metadata

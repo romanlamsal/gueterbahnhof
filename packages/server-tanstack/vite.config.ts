@@ -9,7 +9,14 @@ import viteTsConfigPaths from "vite-tsconfig-paths"
 const config = defineConfig({
     plugins: [
         devtools(),
-        nitro({ preset: "node-middleware" }),
+        nitro({
+            preset: "node-middleware",
+            // pm2 is CJS with dynamic requires — inlining it produces a broken
+            // ESM chunk (ERR_AMBIGUOUS_MODULE_SYNTAX). Trace the FULL package
+            // ('pm2*') into the output: fork mode spawns lib/ProcessContainerFork.js
+            // by path, which a static trace misses.
+            traceDeps: ["pm2*"],
+        }),
         // this is the plugin that enables path aliases
         viteTsConfigPaths({
             projects: ["./tsconfig.json"],
