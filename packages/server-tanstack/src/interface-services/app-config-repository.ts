@@ -1,22 +1,21 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs"
 import { readdir, readFile } from "node:fs/promises"
-import { dirname, join } from "node:path"
+import { join } from "node:path"
 import { parse } from "dotenv"
 import { z } from "zod"
-import { $env } from "@/lib/$env.ts"
 
 export const AppConfigSchema = z.object({
     id: z.string(),
     name: z.string(),
-    script: z.string().optional(),
+    entry: z.string().optional(),
     env: z.record(z.string(), z.string()).default({}),
 })
 
 export type AppConfig = z.infer<typeof AppConfigSchema>
 
-export const appConfigRepository = {
+export const createAppConfigRepository = (appsDir: string) => ({
     getConfigPath(appId: string) {
-        return join($env.GUETERBAHNHOF_DIR, "apps", `${appId}.json`)
+        return join(appsDir, `${appId}.json`)
     },
 
     async createAppConfig(appId: string, name: string, env?: AppConfig["env"]) {
@@ -27,9 +26,7 @@ export const appConfigRepository = {
             return
         }
 
-        const newConfig = AppConfigSchema.parse({ id: appId, name, env } satisfies z.input<
-            typeof AppConfigSchema
-        >)
+        const newConfig = AppConfigSchema.parse({ id: appId, name, env } satisfies z.input<typeof AppConfigSchema>)
 
         writeFileSync(this.getConfigPath(appId), JSON.stringify(newConfig, null, 2))
 
@@ -51,9 +48,8 @@ export const appConfigRepository = {
             return
         }
 
-        const envFilePath = join(dirname(configPath), `${appId}.env`)
+        const envFilePath = join(appsDir, `${appId}.env`)
         if (existsSync(envFilePath)) {
-            console.debug("Reading and appending env file.")
             validation.data.env = {
                 ...(validation.data.env ?? {}),
                 ...parse(readFileSync(envFilePath, "utf-8")),
@@ -63,10 +59,7 @@ export const appConfigRepository = {
         return validation.data
     },
 
-    async updateAppConfig(
-        appId: string,
-        appConfig: Partial<AppConfig>,
-    ): Promise<[AppConfig, AppConfig] | void> {
+    async updateAppConfig(appId: string, appConfig: Partial<AppConfig>): Promise<[AppConfig, AppConfig] | void> {
         const currentConfig = await this.getAppConfig(appId)
 
         if (!currentConfig) {
@@ -76,7 +69,7 @@ export const appConfigRepository = {
 
         const validation = AppConfigSchema.safeParse({ ...currentConfig, ...appConfig })
 
-        if (!validation.data) {
+        if (!validation.success) {
             console.error("Cannot update app config: Parse error:", validation.error)
             return
         }
@@ -87,9 +80,7 @@ export const appConfigRepository = {
     },
 
     async listAppConfigs() {
-        const appsConfigDir = dirname(this.getConfigPath("whocares"))
-
-        const configFiles = await readdir(appsConfigDir)
+        const configFiles = await readdir(appsDir)
 
         return Promise.all(
             configFiles
@@ -99,4 +90,6 @@ export const appConfigRepository = {
                 }),
         ).then(appConfigs => appConfigs.filter(appConfig => !!appConfig))
     },
-}
+})
+
+export type AppConfigRepository = ReturnType<typeof createAppConfigRepository>

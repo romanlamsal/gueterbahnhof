@@ -1,20 +1,19 @@
 import { existsSync, mkdirSync } from "node:fs"
-import { join } from "node:path"
 import { confirm } from "@inquirer/prompts"
 import handler, { createServerEntry } from "@tanstack/react-start/server-entry"
-import { $env } from "@/lib/$env.ts"
-import { appService } from "@/lib/app-service.ts"
-import { appStateService } from "@/lib/app-state-service.ts"
-import { getPm } from "@/lib/pm-service.ts"
+import { appStateService } from "@/interface-services/app-state-service.ts"
+import { getPm } from "@/interface-services/pm-service.ts"
+import { getEnv } from "@/runtime/env.ts"
+import { getAppService, getAppsDir } from "@/runtime/services.ts"
 
 await getPm().then(async () => {
     console.log("PM2 connected in no-daemon mode.")
 
     appStateService.init()
 
-    const appsConfigPath = join($env.GUETERBAHNHOF_DIR, "apps")
+    const appsConfigPath = getAppsDir()
 
-    if (!existsSync($env.GUETERBAHNHOF_DIR)) {
+    if (!existsSync(getEnv().GUETERBAHNHOF_DIR)) {
         const shouldCreate = await confirm({
             message: "GUETERBAHNHOF_DIR does not exist. Create?",
             default: false,
@@ -33,7 +32,7 @@ await getPm().then(async () => {
         mkdirSync(appsConfigPath)
     }
 
-    await appService.startAllApps()
+    await getAppService().startAllApps()
 })
 
 export default createServerEntry({

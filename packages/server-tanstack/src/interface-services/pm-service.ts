@@ -5,14 +5,27 @@ function log(...parts: unknown[]) {
     console.log("[pm2]", ...parts)
 }
 
-type AppProcessStartOptions = Omit<StartOptions, "name" | "namespace"> & { name: string }
+// The domain speaks 'entry'; pm2's 'script' never leaves this adapter.
+export type AppProcessSpec = {
+    name: string
+    entry?: string
+    cwd?: string
+    env?: Record<string, string>
+}
+
+const toStartOptions = (spec: AppProcessSpec): StartOptions => ({
+    name: spec.name,
+    script: spec.entry,
+    cwd: spec.cwd,
+    env: spec.env,
+})
 
 export const pm2Service = {
     getAppProcess(appName: string) {
         return new Promise<ProcessDescription | undefined>(resolve => {
             pm2.describe(appName, (err, processList) => {
                 if (err) {
-                    console.log("ERR", err, typeof err, err.stack)
+                    console.error("Error describing app '" + appName + "':", err.stack)
                     resolve(undefined)
                     return
                 }
@@ -22,14 +35,14 @@ export const pm2Service = {
         })
     },
 
-    startAppProcess(startOptions: AppProcessStartOptions) {
-        if (!startOptions.script) {
+    startAppProcess(spec: AppProcessSpec) {
+        if (!spec.entry) {
             return
         }
 
         return new Promise(resolve => {
-            log(`Starting app '${startOptions.name}'.`)
-            pm2.start(structuredClone(startOptions), (startErr, proc) => {
+            log(`Starting app '${spec.name}'.`)
+            pm2.start(structuredClone(toStartOptions(spec)), (startErr, proc) => {
                 if (startErr) {
                     console.error("Start error:", startErr)
                     return resolve(undefined)
@@ -67,15 +80,17 @@ export const pm2Service = {
         })
     },
 
-    async startOrRestartAppProcess(startOptions: AppProcessStartOptions) {
-        const appProcess = await this.getAppProcess(startOptions.name)
+    async startOrRestartAppProcess(spec: AppProcessSpec) {
+        const appProcess = await this.getAppProcess(spec.name)
         if (appProcess) {
-            await this.stopAppProcess(startOptions.name)
+            await this.stopAppProcess(spec.name)
         }
 
-        return this.startAppProcess(startOptions)
+        return this.startAppProcess(spec)
     },
 }
+
+export type ProcessManager = typeof pm2Service
 
 export function getPm() {
     return new Promise<typeof pm2>((resolve, reject) => {

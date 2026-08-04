@@ -4,10 +4,10 @@
 
 **Blocked by:** None — can start immediately.
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Code is organized into controller / app-service / domain-service / interface-service layers; imports only point downward
-- [ ] Config schema field is `entry`; the pm2 adapter maps it to pm2's `script`; UI form label reads Entry
-- [ ] No identifier or user-facing string says "service" where the glossary says App
-- [ ] `pnpm test` runs config-repository tests against real fs in tmpdirs (create, read with sidecar merge, update, list) and passes
-- [ ] Typecheck and build still pass; existing UI behavior unchanged
+- [x] Code is organized into controller / app-service / domain-service / interface-service layers; imports only point downward
+- [x] Config schema field is `entry`; the pm2 adapter maps it to pm2's `script`; UI form label reads Entry
+- [x] No identifier or user-facing string says "service" where the glossary says App
+- [x] `pnpm test` runs config-repository tests against real fs in tmpdirs (create, read with sidecar merge, update, list) and passes
+- [x] Typecheck and build still pass; existing UI behavior unchanged

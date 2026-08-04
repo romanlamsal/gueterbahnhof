@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button.tsx"
 import { Input } from "@/components/ui/input.tsx"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.tsx"
 import { Textarea } from "@/components/ui/textarea.tsx"
-import type { AppConfig } from "@/lib/app-config-repository.ts"
+import type { AppConfig } from "@/interface-services/app-config-repository.ts"
 import { loadAppsFunc, updateAppFunc } from "@/routes/ui/-lib/server-funcs.ts"
 
 export const Route = createFileRoute("/ui/$appId")({
@@ -123,7 +123,7 @@ function RouteComponent() {
                 return updateAppConfig({
                     env: Object.fromEntries(envs),
                     name: formData.get("name") as string,
-                    script: formData.get("script") as string,
+                    entry: formData.get("entry") as string,
                 })
             }}
             className={"space-y-8 p-4"}
@@ -135,7 +135,7 @@ function RouteComponent() {
             </label>
 
             <label className={"block"}>
-                Script <Input name={"script"} defaultValue={app.config.script} />
+                Entry <Input name={"entry"} defaultValue={app.config.entry} />
             </label>
 
             <Tabs defaultValue={"list"}>
