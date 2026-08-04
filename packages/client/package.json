@@ -9,7 +9,8 @@
   },
   "type": "module",
   "scripts": {
-    "dev": "tsx src/cli.ts dev"
+    "dev": "tsx src/cli.ts dev",
+    "test": "vitest run"
   },
   "keywords": [],
   "author": "",
@@ -25,6 +26,7 @@
     "@types/adm-zip": "^0.5.0",
     "@types/node": "^18.11.9",
     "tsx": "^4.16.2",
-    "typescript": "^5.5.4"
+    "typescript": "^5.5.4",
+    "vitest": "^3.2.4"
   }
 }

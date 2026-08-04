@@ -4,10 +4,10 @@
 
 **Blocked by:** 03 — Deploy guardrails (needs terminal states and failure reasons on the status endpoint).
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Default deploy exits 0 right after the 202 and prints the deployment id
-- [ ] `--wait` polls status until terminal state; failure/timeout → non-zero exit with the reason; supports an env fallback like the other flags
-- [ ] Waiting correlates by deployment id (a later deployment's status is not mistaken for this one's)
-- [ ] The GitHub Action exposes `wait` (default true) and passes it through
-- [ ] Client wait behavior is tested over real HTTP against a controller backed by fakes — no real server-side pm2
+- [x] Default deploy exits 0 right after the 202 and prints the deployment id
+- [x] `--wait` polls status until terminal state; failure/timeout → non-zero exit with the reason; supports an env fallback like the other flags
+- [x] Waiting correlates by deployment id (a later deployment's status is not mistaken for this one's)
+- [x] The GitHub Action exposes `wait` (default true) and passes it through
+- [x] Client wait behavior is tested over real HTTP against a controller backed by fakes — no real server-side pm2

@@ -15,6 +15,10 @@ inputs:
     description: Api key, if applicable
     required: false
     default: ""
+  wait:
+    description: Wait for the deployment to succeed or fail; the step fails when the deployment does.
+    required: false
+    default: "true"
 
 runs:
   using: composite
@@ -25,3 +29,4 @@ runs:
         GUETERBAHNHOF_HOST: ${{ inputs.host }}
         GUETERBAHNHOF_APP_NAME: ${{ inputs.app_name }}
         GUETERBAHNHOF_API_KEY: ${{ inputs.api_key }}
+        GUETERBAHNHOF_WAIT: ${{ inputs.wait }}
