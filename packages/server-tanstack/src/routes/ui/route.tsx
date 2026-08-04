@@ -1,11 +1,19 @@
 import { useMutation, useSuspenseQuery } from "@tanstack/react-query"
-import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router"
+import { createFileRoute, Outlet, redirect, useNavigate } from "@tanstack/react-router"
 import { Suspense } from "react"
 import { Button } from "@/components/ui/button.tsx"
+import { getSessionStatusFunc } from "@/routes/ui/-lib/auth-funcs.ts"
 import { createAppFunc, loadAppsFunc } from "@/routes/ui/-lib/server-funcs.ts"
 
 export const Route = createFileRoute("/ui")({
     component: RouteComponent,
+    beforeLoad: async ({ location }) => {
+        const { authed } = await getSessionStatusFunc()
+
+        if (!authed) {
+            throw redirect({ to: "/login", search: { redirect: location.href } })
+        }
+    },
 })
 
 function RouteComponent() {

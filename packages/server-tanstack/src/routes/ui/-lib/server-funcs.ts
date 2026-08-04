@@ -2,11 +2,18 @@ import { randomUUID } from "node:crypto"
 import { createServerFn } from "@tanstack/react-start"
 import { z } from "zod"
 import { AppConfigSchema } from "@/interface-services/app-config-repository.ts"
+import { assertUiSession } from "@/controllers/ui-session.ts"
 import { getAppService } from "@/runtime/services.ts"
 
-export const loadAppsFunc = createServerFn({ method: "GET" }).handler(() => getAppService().listApps())
+export const loadAppsFunc = createServerFn({ method: "GET" }).handler(() => {
+    assertUiSession()
+    return getAppService().listApps()
+})
 
-export const createAppFunc = createServerFn({ method: "POST" }).handler(() => getAppService().createApp(randomUUID()))
+export const createAppFunc = createServerFn({ method: "POST" }).handler(() => {
+    assertUiSession()
+    return getAppService().createApp(randomUUID())
+})
 
 export const updateAppFunc = createServerFn({ method: "POST" })
     .inputValidator(
@@ -16,5 +23,6 @@ export const updateAppFunc = createServerFn({ method: "POST" })
         }),
     )
     .handler(({ data: { appId, config } }) => {
+        assertUiSession()
         return getAppService().updateAppConfig(appId, config)
     })

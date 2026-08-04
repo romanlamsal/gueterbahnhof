@@ -9,12 +9,18 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as UiRouteRouteImport } from './routes/ui/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as UpdateAppNameRouteRouteImport } from './routes/update/$appName/route'
 import { Route as UiAppIdRouteRouteImport } from './routes/ui/$appId/route'
 import { Route as UpdateAppNameStatusRouteImport } from './routes/update/$appName/status'
 
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UiRouteRoute = UiRouteRouteImport.update({
   id: '/ui',
   path: '/ui',
@@ -44,6 +50,7 @@ const UpdateAppNameStatusRoute = UpdateAppNameStatusRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/ui': typeof UiRouteRouteWithChildren
+  '/login': typeof LoginRoute
   '/ui/$appId': typeof UiAppIdRouteRoute
   '/update/$appName': typeof UpdateAppNameRouteRouteWithChildren
   '/update/$appName/status': typeof UpdateAppNameStatusRoute
@@ -51,6 +58,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/ui': typeof UiRouteRouteWithChildren
+  '/login': typeof LoginRoute
   '/ui/$appId': typeof UiAppIdRouteRoute
   '/update/$appName': typeof UpdateAppNameRouteRouteWithChildren
   '/update/$appName/status': typeof UpdateAppNameStatusRoute
@@ -59,6 +67,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/ui': typeof UiRouteRouteWithChildren
+  '/login': typeof LoginRoute
   '/ui/$appId': typeof UiAppIdRouteRoute
   '/update/$appName': typeof UpdateAppNameRouteRouteWithChildren
   '/update/$appName/status': typeof UpdateAppNameStatusRoute
@@ -68,6 +77,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/ui'
+    | '/login'
     | '/ui/$appId'
     | '/update/$appName'
     | '/update/$appName/status'
@@ -75,6 +85,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/ui'
+    | '/login'
     | '/ui/$appId'
     | '/update/$appName'
     | '/update/$appName/status'
@@ -82,6 +93,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/ui'
+    | '/login'
     | '/ui/$appId'
     | '/update/$appName'
     | '/update/$appName/status'
@@ -90,11 +102,19 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   UiRouteRoute: typeof UiRouteRouteWithChildren
+  LoginRoute: typeof LoginRoute
   UpdateAppNameRouteRoute: typeof UpdateAppNameRouteRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/ui': {
       id: '/ui'
       path: '/ui'
@@ -158,6 +178,7 @@ const UpdateAppNameRouteRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   UiRouteRoute: UiRouteRouteWithChildren,
+  LoginRoute: LoginRoute,
   UpdateAppNameRouteRoute: UpdateAppNameRouteRouteWithChildren,
 }
 export const routeTree = rootRouteImport

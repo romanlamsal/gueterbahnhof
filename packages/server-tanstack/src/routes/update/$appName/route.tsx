@@ -1,11 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { getDeployController } from "@/runtime/services.ts"
+import { getAuthController, getDeployController } from "@/runtime/services.ts"
 
 export const Route = createFileRoute("/update/$appName")({
     component: UpdateAppArtifactPage,
     server: {
         handlers: {
             POST({ request, params }) {
+                const denied = getAuthController().requireApiKey(request)
+                if (denied) {
+                    return denied
+                }
+
                 return getDeployController().postUpdate(request, params.appName)
             },
         },

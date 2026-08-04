@@ -4,10 +4,10 @@
 
 **Blocked by:** 02 — Deploy tracer bullet (happy path).
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] With a key configured: API routes without a valid authorization header → 401/403, including the very first request after boot
-- [ ] UI routes without a valid session redirect to login; login with the correct key sets a signed httpOnly cookie and redirects back
-- [ ] A tampered or fabricated cookie is rejected (signature verified, not presence-checked)
-- [ ] With no key configured: API and UI are fully usable unauthenticated
-- [ ] Session signing/verification is an interface service with its own unit tests; controllers tested for 401/403/redirect via the HTTP handler
+- [x] With a key configured: API routes without a valid authorization header → 401/403, including the very first request after boot
+- [x] UI routes without a valid session redirect to login; login with the correct key sets a signed httpOnly cookie and redirects back
+- [x] A tampered or fabricated cookie is rejected (signature verified, not presence-checked)
+- [x] With no key configured: API and UI are fully usable unauthenticated
+- [x] Session signing/verification is an interface service with its own unit tests; controllers tested for 401/403/redirect via the HTTP handler
