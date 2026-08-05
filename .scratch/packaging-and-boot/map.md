@@ -33,6 +33,7 @@ Label: wayfinder:map
 - [Boot decomposition: CLI process vs server module](issues/07-boot-decomposition.md) — subsumed by 08: the CLI owns the whole lifecycle, and sharing a pm2 module instance is moot under a daemon.
 - [Eager boot mechanism](issues/04-eager-boot-mechanism.md) — subsumed by 08: no boot work remains in the server module, so the CLI fails loudly before it listens; no nitro plugin, chunk path or preset change needed.
 - [Nitro: externalize without tracing?](issues/01-nitro-externals-without-trace-research.md) — no, tracing is hardcoded on for production builds; but discarding `.output/server/node_modules` after the build is safe (pm2 is the only bare import, nothing reads that dir at runtime), which is the route to take.
+- [Packaging shape: one package or two?](issues/02-packaging-shape.md) — **one package**: the server keeps shipping inside `@lamsal-de/gueterbahnhof`. Splitting fixes nothing, the single-bin promise is worth keeping, and the "zero runtime dependencies" goal is abandoned deliberately — `packages/cli/package.json` declares pm2.
 
 ## Not yet specified
 
