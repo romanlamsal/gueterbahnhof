@@ -45,3 +45,13 @@ This reframes most of the map, because it removes a constraint rather than worki
 7. **Nothing needs to be eager inside the server module.** The CLI owns the lifecycle — app-dir creation, migration, reconciliation, signal handlers — and the server module opens its own pm2 client when it first needs one (deploys, and `launchBus` for the SSE stream), both of which are request-driven by nature.
 
 **Effects on the map:** tickets 07 and 04 are subsumed by this decision and resolved. Ticket 03 gains a constraint — the client that spawns the daemon and the client the server uses should be the same pm2 copy/version, or the daemon will refuse the mismatched client. The fog entries about nitro's eager-startup mechanisms and about sharing a pm2 module instance are moot and have been removed.
+
+## Correction (2026-08-05, during implementation)
+
+Decision 4 above — "ownership via a dedicated pm2 namespace" — **rests on a false premise and is withdrawn**. Verified in the installed pm2 6.0.14:
+
+- `Client.prototype.getProcessIdByName` (`lib/Client.js:678-700`) matches on `proc.pm2_env.name == name` (or a resolved script path) with **no namespace filter**.
+- `API._operate`, which backs `stop`/`delete`/`restart`, calls `getProcessIdByName` **first** and only falls back to `getProcessIdsByNamespace` when no name matched (`lib/API.js:1551-1575`).
+- `describe` resolves through the same name lookup.
+
+So on the shared `~/.pm2`, a name-addressed operation reaches every process with that name in any namespace. A namespace groups and displays; it does not protect. Everything else in this ticket's answer stands — the replacement ownership mechanism is decided in [09](09-fleet-ownership-mechanism.md).
