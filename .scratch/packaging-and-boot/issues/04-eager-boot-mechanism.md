@@ -2,11 +2,13 @@
 
 Type: grilling
 Status: open
-Blocked by: 01
+Blocked by: 01, 07
 
 ## Question
 
-How does boot become **eager and loud**? Boot today is module side effects with top-level await in `packages/server-tanstack/src/server.ts`: create the app directory (or exit 1), connect pm2 in no-daemon mode, `appStateService.init()`, `migrateLegacyAppsJson`, `startAllApps`, install SIGTERM/SIGINT wipe handlers. It is bundled into `.output/server/_ssr/index.mjs` and only runs when something triggers an SSR render.
+How does the boot work that **must** live in the server module (per 07's split — pm2 connect, `appStateService.init()`, `startAllApps`, the SIGTERM wipe) become **eager and loud**? Boot today is module side effects with top-level await in `packages/server-tanstack/src/server.ts`, bundled into `.output/server/_ssr/index.mjs`, which only runs when something triggers an SSR render.
+
+Note the stakes if this is left lazy: managed apps stay stopped until someone requests a page — unacceptable for a host whose apps must run continuously.
 
 Candidate mechanisms (01 supplies the facts):
 
