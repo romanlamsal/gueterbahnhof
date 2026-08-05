@@ -32,6 +32,7 @@ Label: wayfinder:map
 - [pm2 daemon mode: revisit ADR-0002](issues/08-pm2-daemon-mode.md) — **external daemon**, auto-spawned and never killed; our apps isolated in a `gueterbahnhof` pm2 namespace; shared `~/.pm2` by default but an explicit `PM2_HOME` is honoured and inherited by the daemon; graceful shutdown stops only our fleet; boot always stop→delete→starts every configured app; nothing needs to be eager inside the server module. Supersedes ADR-0002 (new ADR to be written).
 - [Boot decomposition: CLI process vs server module](issues/07-boot-decomposition.md) — subsumed by 08: the CLI owns the whole lifecycle, and sharing a pm2 module instance is moot under a daemon.
 - [Eager boot mechanism](issues/04-eager-boot-mechanism.md) — subsumed by 08: no boot work remains in the server module, so the CLI fails loudly before it listens; no nitro plugin, chunk path or preset change needed.
+- [Nitro: externalize without tracing?](issues/01-nitro-externals-without-trace-research.md) — no, tracing is hardcoded on for production builds; but discarding `.output/server/node_modules` after the build is safe (pm2 is the only bare import, nothing reads that dir at runtime), which is the route to take.
 
 ## Not yet specified
 

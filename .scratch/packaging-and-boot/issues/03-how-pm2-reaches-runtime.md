@@ -18,6 +18,10 @@ Decide the consequences explicitly: what `dist/package.json` declares, whether `
 
 Depends on 02 for *which* package declares it.
 
+## Narrowed by 01 and 08
+
+The option space has effectively collapsed to the **declared dependency**. 08 moved the fleet's lifecycle into the CLI, so the CLI needs its own pm2 client, and 08's version-alignment constraint means both clients should resolve one installed copy — a shipped copy alongside an installed one is precisely the mismatch pm2 refuses. 01 confirmed the traced copy cannot be turned off but can be safely discarded after the build. What is left to confirm here is the *consequences*, not the choice: which package declares pm2 (waits on 02), what version range, and what the failure looks like on a machine where pm2's own install fails.
+
 ## Added constraint (from 08)
 
 Since 08 chose an external daemon, the pm2 copy that **spawns** the daemon and the copy the **server** drives must be the same version — pm2 refuses a client whose version mismatches the running daemon. Any option that could end up with two different pm2 copies in play (e.g. a bundled copy alongside an operator-installed one) has to explain how versions stay aligned.
