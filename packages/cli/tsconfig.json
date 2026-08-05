@@ -9,13 +9,15 @@
     "strict": false,
     "forceConsistentCasingInFileNames": true,
     "module": "ESNext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
     "resolveJsonModule": true,
-    "emitDeclarationOnly": true,
-    "declaration": true,
-    "outDir": "dist"
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["../server-tanstack/src/*"],
+      "server-tanstack/src/*": ["../server-tanstack/src/*"]
+    }
   },
-  "include": [
-    "./cli.ts", "./server/**", "./client/**"
-  ]
+  "include": ["./cli.ts", "./server-command.ts", "./bundle.js"]
 }

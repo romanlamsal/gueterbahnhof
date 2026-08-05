@@ -35,6 +35,7 @@ Label: wayfinder:map
 - [Nitro: externalize without tracing?](issues/01-nitro-externals-without-trace-research.md) — no, tracing is hardcoded on for production builds; but discarding `.output/server/node_modules` after the build is safe (pm2 is the only bare import, nothing reads that dir at runtime), which is the route to take.
 - [Packaging shape: one package or two?](issues/02-packaging-shape.md) — **one package**: the server keeps shipping inside `@lamsal-de/gueterbahnhof`. Splitting fixes nothing, the single-bin promise is worth keeping, and the "zero runtime dependencies" goal is abandoned deliberately — `packages/cli/package.json` declares pm2.
 - [How pm2 reaches runtime](issues/03-how-pm2-reaches-runtime.md) — **declared dependency** `"pm2": "^6.0.14"` in `packages/cli/package.json`, hard rather than optional; `bundle.js` discards the traced `server-output/server/node_modules`. One installed copy keeps the daemon-spawning client and the server's client aligned per 08.
+- [Fleet ownership mechanism](issues/09-fleet-ownership-mechanism.md) — **flat names, discoverability over isolation**: pm2 stays addressed by plain app name so `pm2 restart <app>` keeps working; `namespace: "gueterbahnhof"` is kept as a label and manual bulk lever but explicitly not a boundary; a same-named foreign process is an accepted, documented risk. Supersedes decision 4 of [08](issues/08-pm2-daemon-mode.md).
 
 ## Not yet specified
 

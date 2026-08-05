@@ -1,6 +1,6 @@
 {
   "name": "@lamsal-de/gueterbahnhof",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "description": "",
   "bin": "./cli.js",
@@ -15,7 +15,7 @@
     "@gueterbahnhof/client": "workspace:*",
     "@types/node": "^22.10.2",
     "cleye": "^2.6.0",
-    "esbuild": "^0.15.13",
+    "esbuild": "^0.25.12",
     "express": "^4.19.2",
     "server-tanstack": "workspace:*",
     "typescript": "^5.5.4"

@@ -5,9 +5,12 @@ import type { appStateService } from "@/interface-services/app-state-service.ts"
 export const createEventsController = ({
     appStateEvents,
 }: {
-    appStateEvents: Pick<typeof appStateService, "addListener">
+    appStateEvents: Pick<typeof appStateService, "addListener" | "init">
 }) => ({
     getEventStream(request: Request): Response {
+        // First subscriber opens the daemon's event bus; idempotent thereafter.
+        appStateEvents.init()
+
         const abortController = new AbortController()
         request.signal.addEventListener("abort", () => abortController.abort())
 

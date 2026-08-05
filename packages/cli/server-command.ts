@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
+import { bootFleet, shutdownFleet } from "server-tanstack/src/runtime/lifecycle.ts"
 import { command } from "cleye"
 import express from "express"
 
@@ -43,7 +44,9 @@ const createServerCommand = (version?: string) =>
                 console.log("Starting server in version", version)
             }
 
-            // The built tanstack server reads its config from env.
+            // The built server reads its config from env. PM2_HOME is deliberately
+            // left untouched: if the operator set it, both our client and the
+            // daemon we spawn inherit it (ADR-0003).
             process.env.GUETERBAHNHOF_DIR = appDir
             if (apiKey) {
                 process.env.GUETERBAHNHOF_API_KEY = apiKey
@@ -56,8 +59,34 @@ const createServerCommand = (version?: string) =>
                 process.exit(1)
             }
 
-            // Importing the nitro bundle boots the server: pm2 connect, legacy
-            // config migration, starting all apps.
+            // Boot the fleet before serving: connect the daemon, migrate a legacy
+            // config, then recreate every configured app. Failing here must be
+            // loud and fatal — a listening server with no apps is worse.
+            try {
+                await bootFleet(appDir)
+            } catch (error) {
+                console.error("Boot failed:", error)
+                process.exit(1)
+            }
+
+            // Our apps go down with us, but the daemon and anything we did not
+            // configure stay up (ADR-0003).
+            let shuttingDown = false
+            for (const signal of ["SIGTERM", "SIGINT"] as const) {
+                process.on(signal, () => {
+                    if (shuttingDown) {
+                        return
+                    }
+                    shuttingDown = true
+
+                    console.log(`Received ${signal}, stopping the fleet.`)
+
+                    shutdownFleet(appDir)
+                        .catch(error => console.error("Failed to stop the fleet:", error))
+                        .then(() => process.exit(0))
+                })
+            }
+
             const { middleware } = await import(join(serverOutputDir, "server/index.mjs"))
 
             const app = express()
