@@ -10,8 +10,9 @@ on:
   workflow_dispatch:
 
 permissions:
-  id-token: write  # Required for OIDC
-  contents: read
+  id-token: write # Required for OIDC trusted publishing
+  contents: write # changesets action pushes the version commit/tags
+  pull-requests: write # changesets action opens the release PR
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
@@ -30,6 +31,15 @@ jobs:
         with:
           path: '**/node_modules'
           key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      # npm trusted publishing (OIDC) requires npm >= 11.5.1; Node 22 bundles 10.x.
+      - name: Update npm for OIDC
+        run: npm install -g npm@latest
+
+      # The changesets action writes a token-based ~/.npmrc when none exists,
+      # which would preempt OIDC — give it a tokenless one to leave alone.
+      - name: Tokenless .npmrc
+        run: echo "registry=https://registry.npmjs.org/" > ~/.npmrc
 
       - name: Install deps
         run: |
@@ -51,4 +61,4 @@ jobs:
           commit: "chore(release): version packages 🦋 [skip ci]"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # No NPM_TOKEN — auth happens via OIDC trusted publishing.
