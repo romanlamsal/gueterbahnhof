@@ -17,3 +17,7 @@ Options to weigh:
 Decide the consequences explicitly: what `dist/package.json` declares, whether `.output/server/node_modules` ships at all, whether the version pm2 runs at is pinned by us or resolved by npm, and what happens on a machine where pm2's install fails.
 
 Depends on 02 for *which* package declares it.
+
+## Added constraint (from 08)
+
+Since 08 chose an external daemon, the pm2 copy that **spawns** the daemon and the copy the **server** drives must be the same version — pm2 refuses a client whose version mismatches the running daemon. Any option that could end up with two different pm2 copies in play (e.g. a bundled copy alongside an operator-installed one) has to explain how versions stay aligned.

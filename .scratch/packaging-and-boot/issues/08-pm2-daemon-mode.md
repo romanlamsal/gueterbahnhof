@@ -1,7 +1,7 @@
 # 08 — pm2 daemon mode: revisit ADR-0002
 
 Type: grilling
-Status: open
+Status: resolved
 Blocked by: none — can start immediately
 
 ## Question
@@ -31,3 +31,17 @@ This reframes most of the map, because it removes a constraint rather than worki
 3. What does boot reconcile — configured-but-not-running, running-but-not-configured, running-with-stale-env?
 4. Which pm2 provides the daemon binary, given ticket 03's answer (installed dependency vs shipped copy)? A client and daemon from mismatched copies is a real failure mode.
 5. Does anything still need to be eager *inside* the server module afterwards, or does the CLI own the whole lifecycle?
+
+## Answer
+
+**Connect to an external pm2 daemon.** ADR-0002 is superseded — a new ADR gets written during implementation, not an edit in place.
+
+1. **Daemon, not no-daemon.** Fleet state lives behind pm2's RPC socket, so several clients (the CLI process, the server module) drive one fleet and module identity stops mattering.
+2. **Auto-spawn, never kill.** `pm2.connect()` starts the daemon when absent. gueterbahnhof never calls `pm2 kill` — that daemon may hold processes that aren't ours.
+3. **The fleet still dies with the server — but only the fleet.** Graceful shutdown stops and deletes *our* apps; the daemon and any foreign processes survive. The existing `wipeAllApps` is already correctly scoped (it iterates our own configs). Consequence to accept knowingly: an *ungraceful* death (crash, SIGKILL) now leaves our apps running under the daemon until gueterbahnhof returns — and boot recreates them anyway per (6).
+4. **Ownership via a dedicated pm2 namespace** — start every app with `namespace: "gueterbahnhof"` (currently omitted from `AppProcessSpec` in `pm2-process-manager.ts`). Name collisions with foreign processes become harmless and "only the fleet" becomes structural rather than a naming convention. The namespace's `describe`/`stop`/`delete` semantics must be verified during implementation.
+5. **PM2_HOME: default to the shared `~/.pm2`, honour an explicit one.** Apps then appear in the operator's normal `pm2 list` / `pm2 logs`. If `PM2_HOME` is set in gueterbahnhof's environment we respect it and the daemon we spawn inherits it — setting that env var is the supported way to get a fully isolated daemon, so no extra flag is needed. Implementation must not sanitise or drop `PM2_HOME` when connecting or when spawning app processes.
+6. **Boot always recreates: stop → delete → start** every configured app, whatever state it is found in. Rationale from operational experience: a plain restart can leave stale environment variables on the process, so delete-then-start is the only way to guarantee the running fleet matches the configured state — the same reasoning `decideRestart` already encodes for env changes, promoted to boot policy. Processes in our namespace with no config are stopped and deleted. Accepted cost: app downtime on every gueterbahnhof restart.
+7. **Nothing needs to be eager inside the server module.** The CLI owns the lifecycle — app-dir creation, migration, reconciliation, signal handlers — and the server module opens its own pm2 client when it first needs one (deploys, and `launchBus` for the SSE stream), both of which are request-driven by nature.
+
+**Effects on the map:** tickets 07 and 04 are subsumed by this decision and resolved. Ticket 03 gains a constraint — the client that spawns the daemon and the client the server uses should be the same pm2 copy/version, or the daemon will refuse the mismatched client. The fog entries about nitro's eager-startup mechanisms and about sharing a pm2 module instance are moot and have been removed.

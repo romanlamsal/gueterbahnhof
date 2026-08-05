@@ -29,13 +29,16 @@ Label: wayfinder:map
 
 <!-- one line per resolved ticket -->
 
+- [pm2 daemon mode: revisit ADR-0002](issues/08-pm2-daemon-mode.md) — **external daemon**, auto-spawned and never killed; our apps isolated in a `gueterbahnhof` pm2 namespace; shared `~/.pm2` by default but an explicit `PM2_HOME` is honoured and inherited by the daemon; graceful shutdown stops only our fleet; boot always stop→delete→starts every configured app; nothing needs to be eager inside the server module. Supersedes ADR-0002 (new ADR to be written).
+- [Boot decomposition: CLI process vs server module](issues/07-boot-decomposition.md) — subsumed by 08: the CLI owns the whole lifecycle, and sharing a pm2 module instance is moot under a daemon.
+- [Eager boot mechanism](issues/04-eager-boot-mechanism.md) — subsumed by 08: no boot work remains in the server module, so the CLI fails loudly before it listens; no nitro plugin, chunk path or preset change needed.
+
 ## Not yet specified
 
 - **Release flow after the packaging shape changes** — whether the workflow still builds via turbo and publishes with changesets, and whether a second package needs its own publish step. Hangs on 02.
 - **Where `.output` is built** — CI each release vs prebuilt artifact. Hangs on 02.
 - **Static asset serving** after the boot decision (currently `express.static` over `server-output/public`). Hangs on 04.
-- **Nitro's eager-startup mechanisms** (plugins, hooks, presets) and **output chunk-path stability** — researched only if 08 leaves anything that must be eager *inside* the server module. Ticket 01 was narrowed to the packaging question on 2026-08-05 for exactly this reason; re-open this if 08 keeps lifecycle work in the server.
-- **Whether the CLI and the built server can share one pm2 module instance** — only matters if 08 keeps no-daemon mode. Was ticket 07's third sub-question; deliberately unresearched until 08 is decided.
+- **Reboot survival** — with the daemon holding the fleet, what starts things after a machine reboot: gueterbahnhof under systemd (our configs stay the single source of truth) or pm2's own `startup`/`resurrect` (a second source of truth). Surfaced by 08; sharpen once 05 is under way.
 
 ## Out of scope
 

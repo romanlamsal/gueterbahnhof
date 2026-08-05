@@ -1,7 +1,7 @@
 # 07 — Boot decomposition: CLI process vs server module
 
 Type: grilling
-Status: open
+Status: resolved
 Blocked by: 08
 
 ## Question
@@ -20,3 +20,9 @@ Decide:
 3. **Verify the forcing constraint:** can the CLI and the built server share *one* pm2 module instance — the CLI leaving pm2 external so both resolve the same installed file, with Node's CJS cache shared between `require` and `import` of a CJS package? If they can, more of boot could move to the CLI and ticket 04 shrinks further. If they cannot, the split above is forced. Prove it with a small experiment rather than reasoning alone.
 
 This ticket constrains 04: it decides how much eagerness is still needed from the server module at all.
+
+## Answer
+
+Subsumed by [08 — pm2 daemon mode](08-pm2-daemon-mode.md).
+
+Under an external daemon the stateless/stateful split disappears: fleet state lives in the daemon, so the CLI can own app-directory creation, migration, boot reconciliation, starting the fleet and the signal handlers, while the server module opens its own client for deploys and SSE. Sub-question 3 (can the CLI and the server share one pm2 module instance) is moot — two independent clients are fine by design, which is the whole point of the daemon.
