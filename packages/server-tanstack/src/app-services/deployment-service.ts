@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto"
 import { createDeployment, type Deployment, isInFlight, transitionDeployment } from "@/domain/deployment.ts"
 import type { AppConfig, AppConfigRepository } from "@/interface-services/app-config-repository.ts"
 import type { ArtifactStore } from "@/interface-services/artifact-store.ts"
-import { type ProcessManager, toProcessSpec } from "@/interface-services/pm-service.ts"
+import { type ProcessManager, toProcessSpec } from "@/interface-services/pm2-process-manager.ts"
 
 // Deployment records are in-memory only, capped per app (ADR-0001).
 const MAX_DEPLOYMENTS_PER_APP = 5

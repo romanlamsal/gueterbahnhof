@@ -47,7 +47,7 @@ const makeFakes = (initialConfigs: AppConfig[] = [], { processExists = true } = 
 
     const artifactStore = {
         getAppDir: (appId: string) => `/apps/${appId}`,
-        deleteAppDir: vi.fn(async () => {}),
+        deleteAppDir: vi.fn(async () => undefined),
         hasArtifact: vi.fn(async () => true),
     }
 

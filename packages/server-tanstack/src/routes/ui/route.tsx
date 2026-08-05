@@ -67,15 +67,11 @@ function RouteComponent() {
                     <Button
                         variant={"outline"}
                         key={app.config.id}
-                        onClick={() =>
-                            navigate({ to: "/ui/$appId", params: { appId: app.config.id } })
-                        }
+                        onClick={() => navigate({ to: "/ui/$appId", params: { appId: app.config.id } })}
                         className={"justify-start gap-2"}
                         title={stateLabels[app.state]}
                     >
-                        <span
-                            className={`inline-block size-2 shrink-0 rounded-full ${stateBadgeClasses[app.state]}`}
-                        />
+                        <span className={`inline-block size-2 shrink-0 rounded-full ${stateBadgeClasses[app.state]}`} />
                         {app.config.name}
                         {app.state === "no-artifact" ? (
                             <span className={"text-xs text-gray-400"}>(no artifact)</span>

@@ -17,9 +17,9 @@ export const createEventsController = ({
 
                 controller.enqueue(encoder.encode("retry: 3000\n\n"))
 
-                appStateEvents.addListener((appName, status) => {
+                appStateEvents.addListener((appName, state) => {
                     try {
-                        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ appName, status })}\n\n`))
+                        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ appName, state })}\n\n`))
                     } catch {
                         abortController.abort()
                     }

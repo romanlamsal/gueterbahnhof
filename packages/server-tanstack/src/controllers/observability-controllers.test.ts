@@ -51,7 +51,7 @@ describe("events controller: SSE stream", () => {
 
         listeners[0]?.("my-app", "online")
         const second = await reader.read()
-        expect(decoder.decode(second.value)).toBe(`data: {"appName":"my-app","status":"online"}\n\n`)
+        expect(decoder.decode(second.value)).toBe(`data: {"appName":"my-app","state":"online"}\n\n`)
 
         abort.abort()
         const done = await reader.read()

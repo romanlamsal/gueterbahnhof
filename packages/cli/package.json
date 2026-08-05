@@ -13,12 +13,11 @@
   "license": "ISC",
   "devDependencies": {
     "@gueterbahnhof/client": "workspace:*",
-    "@types/node": "^18.19.42",
+    "@types/node": "^22.10.2",
     "commander": "^9.4.1",
     "esbuild": "^0.15.13",
     "express": "^4.19.2",
     "server-tanstack": "workspace:*",
-    "tsx": "^3.11.0",
     "typescript": "^5.5.4"
   },
   "publishConfig": {

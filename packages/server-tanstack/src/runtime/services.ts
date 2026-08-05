@@ -9,7 +9,7 @@ import { createEventsController } from "@/controllers/events-controller.ts"
 import { createAppConfigRepository } from "@/interface-services/app-config-repository.ts"
 import { appStateService } from "@/interface-services/app-state-service.ts"
 import { createArtifactStore } from "@/interface-services/artifact-store.ts"
-import { pm2Service } from "@/interface-services/pm-service.ts"
+import { pm2ProcessManager } from "@/interface-services/pm2-process-manager.ts"
 import { createSessionSigner } from "@/interface-services/session-signer.ts"
 import { getEnv } from "./env.ts"
 
@@ -37,7 +37,7 @@ export const getArtifactStore = () => {
 export const getAppService = () => {
     appService ??= createAppService({
         configRepository: getAppConfigRepository(),
-        processManager: pm2Service,
+        processManager: pm2ProcessManager,
         artifactStore: getArtifactStore(),
     })
     return appService
@@ -47,7 +47,7 @@ export const getDeploymentService = () => {
     deploymentService ??= createDeploymentService({
         configRepository: getAppConfigRepository(),
         artifactStore: getArtifactStore(),
-        processManager: pm2Service,
+        processManager: pm2ProcessManager,
     })
     return deploymentService
 }

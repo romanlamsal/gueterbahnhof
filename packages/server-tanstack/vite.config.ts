@@ -26,7 +26,9 @@ const config = defineConfig({
         viteReact(),
     ],
     optimizeDeps: {
-        exclude: ["pty.js", "term.js"],
+        // pm2 and its optional terminal deps are server-only CJS — the dep
+        // optimizer must not try to pre-bundle them.
+        exclude: ["pty.js", "term.js", "pm2", "@pm2/blessed", "blessed"],
     },
 })
 

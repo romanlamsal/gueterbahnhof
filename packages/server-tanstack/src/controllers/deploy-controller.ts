@@ -14,10 +14,7 @@ export const createDeployController = ({
         })
 
         if (!zipFilePath) {
-            return Response.json(
-                { error: "Expected multipart/form-data with an 'artifact' file." },
-                { status: 400 },
-            )
+            return Response.json({ error: "Expected multipart/form-data with an 'artifact' file." }, { status: 400 })
         }
 
         const result = await deploymentService.requestDeployment(appName, zipFilePath)

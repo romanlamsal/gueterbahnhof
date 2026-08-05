@@ -13,11 +13,15 @@ export type AppProcessSpec = {
     env?: Record<string, string>
 }
 
+// Prefix every app log line with a readable timestamp (24h).
+const LOG_DATE_FORMAT = "YYYY-MM-DD HH:mm:ss"
+
 const toStartOptions = (spec: AppProcessSpec): StartOptions => ({
     name: spec.name,
     script: spec.entry,
     cwd: spec.cwd,
     env: spec.env,
+    log_date_format: LOG_DATE_FORMAT,
 })
 
 // Shared config -> process-spec mapping: the app runs inside its app dir.
@@ -31,7 +35,7 @@ export const toProcessSpec = (
     cwd: appDir,
 })
 
-export const pm2Service = {
+export const pm2ProcessManager = {
     getAppProcess(appName: string) {
         return new Promise<ProcessDescription | undefined>(resolve => {
             pm2.describe(appName, (err, processList) => {
@@ -101,7 +105,7 @@ export const pm2Service = {
     },
 }
 
-export type ProcessManager = typeof pm2Service
+export type ProcessManager = typeof pm2ProcessManager
 
 export function getPm() {
     return new Promise<typeof pm2>((resolve, reject) => {

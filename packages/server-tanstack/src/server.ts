@@ -2,7 +2,7 @@ import { mkdirSync } from "node:fs"
 import handler, { createServerEntry } from "@tanstack/react-start/server-entry"
 import { appStateService } from "@/interface-services/app-state-service.ts"
 import { migrateLegacyAppsJson } from "@/interface-services/legacy-migration.ts"
-import { getPm } from "@/interface-services/pm-service.ts"
+import { getPm } from "@/interface-services/pm2-process-manager.ts"
 import { getEnv } from "@/runtime/env.ts"
 import { getAppService, getAppsDir } from "@/runtime/services.ts"
 
@@ -27,13 +27,18 @@ await getPm().then(async () => {
 // Dies-together lifecycle (ADR-0002): wipe managed processes exactly once.
 // pm2's in-process daemon installs its own SIGTERM/SIGINT handlers that exit
 // synchronously and would preempt the wipe — remove them, we own shutdown.
-let wipePromise: Promise<void> | undefined
+let wipeStarted = false
 for (const signal of ["SIGTERM", "SIGINT"] as const) {
     process.removeAllListeners(signal)
     process.on(signal, () => {
+        if (wipeStarted) {
+            return
+        }
+        wipeStarted = true
+
         console.log(`Received ${signal}, shutting down.`)
 
-        wipePromise ??= getAppService()
+        getAppService()
             .wipeAllApps()
             .catch(error => console.error("Failed to wipe apps on shutdown:", error))
             .then(() => process.exit(0))

@@ -29,15 +29,17 @@ afterEach(() => {
 
 describe("deploy controller: POST /update/:appname", () => {
     it("responds 202 with the deployment id and hands the uploaded zip to the service", async () => {
-        const requestDeployment = vi.fn(async (_appName: string, zipFilePath: string): Promise<RequestDeploymentResult> => {
-            uploadedPaths.push(zipFilePath)
+        const requestDeployment = vi.fn(
+            async (_appName: string, zipFilePath: string): Promise<RequestDeploymentResult> => {
+                uploadedPaths.push(zipFilePath)
 
-            expect(existsSync(zipFilePath)).toBe(true)
-            const zip = new AdmZip(readFileSync(zipFilePath))
-            expect(zip.getEntries().map(entry => entry.entryName)).toEqual(["index.js"])
+                expect(existsSync(zipFilePath)).toBe(true)
+                const zip = new AdmZip(readFileSync(zipFilePath))
+                expect(zip.getEntries().map(entry => entry.entryName)).toEqual(["index.js"])
 
-            return { ok: true, deploymentId: "dep-1", completed: Promise.resolve({} as Deployment) }
-        })
+                return { ok: true, deploymentId: "dep-1", completed: Promise.resolve({} as Deployment) }
+            },
+        )
 
         const controller = createDeployController({
             deploymentService: { requestDeployment, getLatestDeployment: vi.fn(), listDeployments: vi.fn(() => []) },
@@ -180,9 +182,7 @@ describe("deploy controller: GET /update/:appname/status", () => {
         const controller = createDeployController({
             deploymentService: {
                 requestDeployment: vi.fn(),
-                getLatestDeployment: vi.fn(
-                    (): Deployment => ({ id: "dep-9", appName: "my-app", state: "succeeded" }),
-                ),
+                getLatestDeployment: vi.fn((): Deployment => ({ id: "dep-9", appName: "my-app", state: "succeeded" })),
                 listDeployments: vi.fn((): Deployment[] => [{ id: "dep-9", appName: "my-app", state: "succeeded" }]),
             },
         })

@@ -23,9 +23,7 @@ export const createArtifactStore = (appsDir: string) => ({
 
             await rm(appDir, { recursive: true, force: true })
             await new Promise<void>((resolveExtract, rejectExtract) => {
-                zip.extractAllToAsync(appDir, true, false, error =>
-                    error ? rejectExtract(error) : resolveExtract(),
-                )
+                zip.extractAllToAsync(appDir, true, false, error => (error ? rejectExtract(error) : resolveExtract()))
             })
         } catch (error) {
             await rm(appDir, { recursive: true, force: true })

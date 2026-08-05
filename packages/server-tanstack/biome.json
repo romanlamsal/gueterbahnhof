@@ -1,7 +1,18 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.3.7/schema.json",
   "vcs": { "enabled": false, "clientKind": "git", "useIgnoreFile": false },
-  "files": { "ignoreUnknown": false, "includes": ["**", "!**/node_modules/**/*", "!**/build/**/*", "!**/dist/**/*"] },
+  "files": {
+    "ignoreUnknown": false,
+    "includes": [
+      "**",
+      "!**/node_modules/**/*",
+      "!**/build/**/*",
+      "!**/dist/**/*",
+      "!**/.output/**/*",
+      "!**/routeTree.gen.ts",
+      "!src/styles.css"
+    ]
+  },
   "formatter": {
     "enabled": true,
     "useEditorconfig": true,

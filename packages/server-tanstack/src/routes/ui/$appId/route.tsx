@@ -1,20 +1,15 @@
-import {
-    type Updater,
-    type UseMutationOptions,
-    useMutation,
-    useSuspenseQuery,
-} from "@tanstack/react-query"
+import { type Updater, type UseMutationOptions, useMutation, useSuspenseQuery } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { parse } from "dotenv"
 import { X } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
+import type { AppMutationResult } from "@/app-services/app-service.ts"
 import { SaveButton } from "@/components/SaveButton.tsx"
 import { Button } from "@/components/ui/button.tsx"
 import { Input } from "@/components/ui/input.tsx"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.tsx"
 import { Textarea } from "@/components/ui/textarea.tsx"
-import type { AppMutationResult } from "@/app-services/app-service.ts"
 import type { AppConfig } from "@/interface-services/app-config-repository.ts"
+import { formatEnvs, parseEnvs } from "@/lib/dotenv-roundtrip.ts"
 import { deleteAppFunc, loadAppsFunc, updateAppFunc } from "@/routes/ui/-lib/server-funcs.ts"
 
 export const Route = createFileRoute("/ui/$appId")({
@@ -54,13 +49,7 @@ const DotenvTextarea = ({
     onChangeEnvs?: (updater: Updater<typeof envs, typeof envs>) => void
     escaped?: boolean
 }) => {
-    const dotenvFormat = useMemo(
-        () =>
-            envs
-                .map(([key, value]) => `${key}=${escaped ? encodeURIComponent(value) : value}`)
-                .join("\n"),
-        [envs, escaped],
-    )
+    const dotenvFormat = useMemo(() => formatEnvs(envs, escaped), [envs, escaped])
 
     return (
         <Textarea
@@ -68,23 +57,7 @@ const DotenvTextarea = ({
             defaultValue={dotenvFormat}
             onChange={ev => {
                 try {
-                    const parsed = parse(
-                        ev.currentTarget.value
-                            .split("\n")
-                            .map(line => {
-                                const eqIndex = line.indexOf("=")
-                                if (eqIndex === -1) {
-                                    return line
-                                }
-                                // split at the FIRST '=' only — values like
-                                // postgres://h/db?a=1 contain '=' themselves
-                                const key = line.slice(0, eqIndex)
-                                const value = line.slice(eqIndex + 1)
-                                return `${key}=${!escaped ? encodeURIComponent(value) : value}`
-                            })
-                            .join("\n"),
-                    )
-                    onChangeEnvs?.(Object.entries(parsed))
+                    onChangeEnvs?.(parseEnvs(ev.currentTarget.value, escaped))
                 } catch {
                     console.log("Could not parse dotenv from string.")
                 }
@@ -189,10 +162,7 @@ function RouteComponent() {
                                     onChange={ev => {
                                         setEnvs(prevState => [
                                             ...prevState.slice(0, i),
-                                            [
-                                                ev.target.value as string,
-                                                prevState[i]?.[1] ?? "",
-                                            ] as const,
+                                            [ev.target.value as string, prevState[i]?.[1] ?? ""] as const,
                                             ...prevState.slice(i + 1),
                                         ])
                                     }}
@@ -202,10 +172,7 @@ function RouteComponent() {
                                     onChange={ev => {
                                         setEnvs(prevState => [
                                             ...prevState.slice(0, i),
-                                            [
-                                                prevState[i]?.[0] ?? "",
-                                                ev.target.value as string,
-                                            ] as const,
+                                            [prevState[i]?.[0] ?? "", ev.target.value as string] as const,
                                             ...prevState.slice(i + 1),
                                         ])
                                     }}
@@ -213,10 +180,7 @@ function RouteComponent() {
                                 <X
                                     className={"cursor-pointer text-red-500"}
                                     onClick={() =>
-                                        setEnvs(prevState => [
-                                            ...prevState.slice(0, i),
-                                            ...prevState.slice(i + 1),
-                                        ])
+                                        setEnvs(prevState => [...prevState.slice(0, i), ...prevState.slice(i + 1)])
                                     }
                                 />
                             </li>

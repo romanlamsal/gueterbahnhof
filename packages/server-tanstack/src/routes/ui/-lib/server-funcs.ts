@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto"
 import { createServerFn } from "@tanstack/react-start"
 import { z } from "zod"
-import { AppConfigSchema } from "@/interface-services/app-config-repository.ts"
 import { assertUiSession } from "@/controllers/ui-session.ts"
+import { AppConfigSchema } from "@/interface-services/app-config-repository.ts"
 import { getAppService } from "@/runtime/services.ts"
 
 export const loadAppsFunc = createServerFn({ method: "GET" }).handler(() => {

@@ -115,7 +115,7 @@ describe("deploymentService", () => {
     })
 
     it("rejects a second deployment while one is in flight, returning the in-flight id", async () => {
-        let releaseExtract = () => {}
+        let releaseExtract: () => void = () => undefined
         const blockedExtract = vi.fn(
             () =>
                 new Promise<string>(resolve => {
@@ -211,7 +211,7 @@ describe("deploymentService", () => {
     })
 
     it("is 'extracting' immediately after the request is accepted", async () => {
-        let releaseExtract = () => {}
+        let releaseExtract: () => void = () => undefined
         const blockedExtract = vi.fn(
             () =>
                 new Promise<string>(resolve => {

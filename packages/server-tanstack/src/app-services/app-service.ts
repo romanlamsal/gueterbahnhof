@@ -2,7 +2,7 @@ import { decideRestart } from "@/domain/app-config-change.ts"
 import { deriveAppState } from "@/domain/app-state.ts"
 import type { AppConfig, AppConfigRepository } from "@/interface-services/app-config-repository.ts"
 import type { ArtifactStore } from "@/interface-services/artifact-store.ts"
-import { type ProcessManager, toProcessSpec } from "@/interface-services/pm-service.ts"
+import { type ProcessManager, toProcessSpec } from "@/interface-services/pm2-process-manager.ts"
 
 export type AppMutationResult =
     | { ok: true; config: AppConfig }
@@ -32,9 +32,7 @@ export const createAppService = ({
         async startAllApps() {
             const configs = await configRepository.listAppConfigs()
 
-            const procs = await Promise.all(
-                configs.map(config => processManager.startAppProcess(specFor(config))),
-            )
+            const procs = await Promise.all(configs.map(config => processManager.startAppProcess(specFor(config))))
 
             console.log(`Started ${procs.filter(Boolean).length} of ${configs.length} apps.`)
         },
@@ -44,7 +42,7 @@ export const createAppService = ({
 
             const procs = await Promise.all(configs.map(config => processManager.deleteAppProcess(config.name)))
 
-            console.log(`Stopped ${procs.filter(Boolean).length} of ${configs.length} apps.`)
+            console.log(`Removed ${procs.filter(Boolean).length} of ${configs.length} apps from the process manager.`)
         },
 
         async listApps() {

@@ -12,6 +12,8 @@
     -   New UI (React/shadcn): live app states over SSE, dotenv editing, unique app names, delete with full cleanup, distinct "no artifact" state.
     -   Legacy installs migrate automatically on first boot (`apps.json` → per-app configs, artifact dirs moved); the legacy file is renamed to `apps.json.migrated`.
     -   Config field `script` is now `entry`; apps have a stable `id` alongside their unique `name`.
+    -   App logs are timestamped (`YYYY-MM-DD HH:mm:ss`) via pm2's `log_date_format`.
+    -   The UI's dotenv editor round-trips npm dotenv's quoting/comment/multiline rules and can read and write URI-safe serialized values ("Escaped" mode).
     -   Breaking: raw pm2 describe output (`GET /status/:name`) is gone — use `GET /apps`; the server package is no longer published separately.
 
 ## 0.2.2

@@ -5,7 +5,9 @@ export const Route = createFileRoute("/update/$appName/status")({
     server: {
         handlers: {
             GET({ request, params }) {
-                const denied = getAuthController().requireApiKey(request)
+                // CLI polls with the key header; the UI upload page polls on
+                // its session cookie.
+                const denied = getAuthController().requireApiKeyOrSession(request)
                 if (denied) {
                     return denied
                 }

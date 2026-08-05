@@ -27,9 +27,7 @@ export const SaveButton = ({
 
     return (
         <>
-            {showIcon && iconPosition === "left" && (
-                <Check className={"mr-1 inline size-4 text-green-500"} />
-            )}
+            {showIcon && iconPosition === "left" && <Check className={"mr-1 inline size-4 text-green-500"} />}
             <Button
                 {...buttonProps}
                 onClick={ev => {
@@ -41,9 +39,7 @@ export const SaveButton = ({
                     }
                 }}
             />
-            {showIcon && iconPosition === "right" && (
-                <Check className={"ml-1 inline size-4 text-green-500"} />
-            )}
+            {showIcon && iconPosition === "right" && <Check className={"ml-1 inline size-4 text-green-500"} />}
         </>
     )
 }
