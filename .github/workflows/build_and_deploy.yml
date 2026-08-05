@@ -18,7 +18,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
         with:
-          node-version: "20.18.2"
+          node-version: "22.21.1"
 
       # Node
       - name: Cache node_modules
@@ -29,13 +29,14 @@ jobs:
 
       - name: Install deps
         run: |
-          npm install -g pnpm@8.15.8
+          npm install -g pnpm@10.24.0
           pnpm install
 
+      # Build through turbo so server-tanstack's .output exists before the
+      # cli bundle copies it into dist/.
       - name: Build
-        working-directory: packages/cli
         run: |
-          pnpm build
+          pnpm exec turbo run build --filter @lamsal-de/gueterbahnhof
 
       - name: 📣 Create Release Pull Request or Publish to npm
         id: changesets

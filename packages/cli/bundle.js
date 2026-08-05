@@ -1,10 +1,8 @@
 import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs"
-import { fileURLToPath } from "node:url"
-import cliPackageJson from "./package.json" assert { type: "json" }
-import serverPackageJson from "@gueterbahnhof/server/package.json" assert { type: "json" }
-import clientPackageJson from "@gueterbahnhof/client/package.json" assert { type: "json" }
-import { build } from "esbuild"
 import { join } from "node:path"
+import { fileURLToPath } from "node:url"
+import { build } from "esbuild"
+import cliPackageJson from "./package.json" with { type: "json" }
 
 const distFilePath = fileURLToPath(new URL("dist", import.meta.url))
 if (existsSync(distFilePath)) {
@@ -13,39 +11,38 @@ if (existsSync(distFilePath)) {
 
 mkdirSync(distFilePath)
 
-const serverDeps = serverPackageJson.dependencies
-const clientDeps = clientPackageJson.dependencies
+const serverOutputDir = fileURLToPath(new URL("../server-tanstack/.output", import.meta.url))
 
-const packageDeps = { ...clientDeps, ...serverDeps }
+if (!existsSync(serverOutputDir)) {
+    console.error("server-tanstack/.output not found — build server-tanstack first (turbo does this for you).")
+    process.exit(1)
+}
 
-build({
+// Everything is bundled: cli.js is self-contained, the nitro server bundle
+// ships alongside it, and the published package has zero dependencies.
+await build({
     entryPoints: ["cli.ts"],
     outfile: "dist/cli.js",
-    external: Object.keys(packageDeps),
     bundle: true,
     platform: "node",
     format: "esm",
-}).then(async () => {
-    const serverUiDir = new URL(
-        "src/ui/",
-        import.meta.resolve("@gueterbahnhof/server/package.json"),
-    )
-    cpSync(new URL("assets", serverUiDir), join(distFilePath, "assets"), { recursive: true })
-
-    writeFileSync(
-        join(distFilePath, "package.json"),
-        JSON.stringify(
-            {
-                ...cliPackageJson,
-                dependencies: {
-                    ...clientDeps,
-                    ...serverDeps,
-                    ...cliPackageJson.dependencies,
-                },
-                devDependencies: {},
-            },
-            null,
-            2,
-        ),
-    )
+    banner: {
+        js: "import { createRequire as __createRequire } from 'node:module'; const require = __createRequire(import.meta.url);",
+    },
 })
+
+cpSync(serverOutputDir, join(distFilePath, "server-output"), { recursive: true })
+
+writeFileSync(
+    join(distFilePath, "package.json"),
+    JSON.stringify(
+        {
+            ...cliPackageJson,
+            dependencies: {},
+            devDependencies: {},
+            scripts: {},
+        },
+        null,
+        2,
+    ),
+)

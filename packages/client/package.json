@@ -9,22 +9,23 @@
   },
   "type": "module",
   "scripts": {
-    "dev": "tsx src/cli.ts dev"
+    "dev": "tsx src/cli.ts dev",
+    "test": "vitest run"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "adm-zip": "^0.5.9",
-    "commander": "^9.4.1",
+    "cleye": "^2.6.0",
     "formdata-node": "^5.0.0",
     "got": "^12.5.2"
   },
   "devDependencies": {
-    "@gueterbahnhof/common": "workspace:*",
     "@types/adm-zip": "^0.5.0",
-    "@types/node": "^18.11.9",
+    "@types/node": "^22.10.2",
     "tsx": "^4.16.2",
-    "typescript": "^5.5.4"
+    "typescript": "^5.5.4",
+    "vitest": "^3.2.4"
   }
 }

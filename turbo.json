@@ -3,7 +3,8 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "inputs": ["src"],
+      "inputs": ["src/**", "*.ts", "*.js", "*.json", "public/**"],
+      "outputs": [".output/**", "dist/**"],
       "outputLogs": "new-only"
     },
     "dev": {
