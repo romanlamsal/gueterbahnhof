@@ -34,6 +34,8 @@ Label: wayfinder:map
 - **Release flow after the packaging shape changes** — whether the workflow still builds via turbo and publishes with changesets, and whether a second package needs its own publish step. Hangs on 02.
 - **Where `.output` is built** — CI each release vs prebuilt artifact. Hangs on 02.
 - **Static asset serving** after the boot decision (currently `express.static` over `server-output/public`). Hangs on 04.
+- **Nitro's eager-startup mechanisms** (plugins, hooks, presets) and **output chunk-path stability** — researched only if 08 leaves anything that must be eager *inside* the server module. Ticket 01 was narrowed to the packaging question on 2026-08-05 for exactly this reason; re-open this if 08 keeps lifecycle work in the server.
+- **Whether the CLI and the built server can share one pm2 module instance** — only matters if 08 keeps no-daemon mode. Was ticket 07's third sub-question; deliberately unresearched until 08 is decided.
 
 ## Out of scope
 
@@ -41,4 +43,4 @@ Label: wayfinder:map
 - **Corrupt legacy config semantics** — boot currently logs and starts zero apps when `apps.json` is unparseable (as seen truncated in production on 0.2.x); hard-failing instead is not part of this effort.
 - **Express wrapper's fate** as an independent decision — if 04 entails removing it, that rides along; it gets no ticket of its own.
 - **Deprecating the broken 1.0.0 on npm** — operator action, outside the map.
-- **Revisiting ADR-0002 (no-daemon lifecycle)** — surfaced here because the production crash took every managed app down with the server. Real question, different effort.
+*(Revisiting ADR-0002's no-daemon lifecycle was ruled out here on 2026-08-05 and then ruled back **in** the same day — it turned out to be the root of the shared-instance and eager-boot problems rather than a separate concern. It is now ticket 08 and leads the map.)*
