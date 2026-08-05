@@ -58,7 +58,7 @@ export const createAppService = ({
 
                     return {
                         config,
-                        state: deriveAppState(processStatus, artifactStore.hasArtifact(config.id)),
+                        state: deriveAppState(processStatus, await artifactStore.hasArtifact(config.id)),
                     }
                 }),
             )

@@ -1,5 +1,4 @@
-import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs"
-import { readdir, readFile } from "node:fs/promises"
+import { readdir, readFile, rm, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { parse } from "dotenv"
 import { z } from "zod"
@@ -12,6 +11,8 @@ export const AppConfigSchema = z.object({
 })
 
 export type AppConfig = z.infer<typeof AppConfigSchema>
+
+const readFileOrUndefined = (filePath: string) => readFile(filePath, "utf8").catch(() => undefined)
 
 export const createAppConfigRepository = (appsDir: string) => ({
     getConfigPath(appId: string) {
@@ -28,31 +29,38 @@ export const createAppConfigRepository = (appsDir: string) => ({
 
         const newConfig = AppConfigSchema.parse({ id: appId, name, env } satisfies z.input<typeof AppConfigSchema>)
 
-        writeFileSync(this.getConfigPath(appId), JSON.stringify(newConfig, null, 2))
+        await writeFile(this.getConfigPath(appId), JSON.stringify(newConfig, null, 2))
 
         return newConfig
     },
 
     async getAppConfig(appId: string) {
-        const configPath = this.getConfigPath(appId)
-        const configExists = existsSync(configPath)
+        const raw = await readFileOrUndefined(this.getConfigPath(appId))
 
-        if (!configExists) {
+        if (raw === undefined) {
             return
         }
 
-        const validation = AppConfigSchema.safeParse(JSON.parse(await readFile(configPath, "utf8")))
+        let parsed: unknown
+        try {
+            parsed = JSON.parse(raw)
+        } catch (error) {
+            console.error("Invalid config (not JSON):", error)
+            return
+        }
+
+        const validation = AppConfigSchema.safeParse(parsed)
 
         if (!validation.success) {
             console.error("Invalid config:", validation.error)
             return
         }
 
-        const envFilePath = join(appsDir, `${appId}.env`)
-        if (existsSync(envFilePath)) {
+        const envFileContent = await readFileOrUndefined(join(appsDir, `${appId}.env`))
+        if (envFileContent !== undefined) {
             validation.data.env = {
                 ...(validation.data.env ?? {}),
-                ...parse(readFileSync(envFilePath, "utf-8")),
+                ...parse(envFileContent),
             }
         }
 
@@ -74,14 +82,14 @@ export const createAppConfigRepository = (appsDir: string) => ({
             return
         }
 
-        writeFileSync(this.getConfigPath(appId), JSON.stringify(validation.data, null, 2))
+        await writeFile(this.getConfigPath(appId), JSON.stringify(validation.data, null, 2))
 
         return [currentConfig, validation.data] as const
     },
 
     async deleteAppConfig(appId: string) {
-        rmSync(this.getConfigPath(appId), { force: true })
-        rmSync(join(appsDir, `${appId}.env`), { force: true })
+        await rm(this.getConfigPath(appId), { force: true })
+        await rm(join(appsDir, `${appId}.env`), { force: true })
     },
 
     async findAppConfigByName(name: string) {

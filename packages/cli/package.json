@@ -1,6 +1,6 @@
 {
   "name": "@lamsal-de/gueterbahnhof",
-  "version": "0.2.2",
+  "version": "1.0.0",
   "type": "module",
   "description": "",
   "bin": "./cli.js",

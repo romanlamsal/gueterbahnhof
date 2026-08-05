@@ -70,12 +70,12 @@ describe("artifactStore", () => {
     })
 
     it("knows whether an artifact is present", async () => {
-        expect(store.hasArtifact("app-1")).toBe(false)
+        expect(await store.hasArtifact("app-1")).toBe(false)
 
         const zipPath = writeZip(scratchDir, { "index.js": "x" })
         await store.extractArtifact("app-1", zipPath)
 
-        expect(store.hasArtifact("app-1")).toBe(true)
+        expect(await store.hasArtifact("app-1")).toBe(true)
     })
 
     it("deletes the app directory", async () => {
@@ -84,7 +84,7 @@ describe("artifactStore", () => {
 
         await store.deleteAppDir("app-1")
 
-        expect(store.hasArtifact("app-1")).toBe(false)
+        expect(await store.hasArtifact("app-1")).toBe(false)
         expect(existsSync(store.getAppDir("app-1"))).toBe(false)
     })
 })

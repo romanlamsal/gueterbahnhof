@@ -1,4 +1,4 @@
-import { existsSync, rmSync } from "node:fs"
+import { access, rm } from "node:fs/promises"
 import { join, resolve } from "node:path"
 import AdmZip from "adm-zip"
 
@@ -9,8 +9,10 @@ export const createArtifactStore = (appsDir: string) => ({
         return resolve(join(appsDir, appId))
     },
 
-    hasArtifact(appId: string) {
-        return existsSync(this.getAppDir(appId))
+    async hasArtifact(appId: string) {
+        return access(this.getAppDir(appId))
+            .then(() => true)
+            .catch(() => false)
     },
 
     async extractArtifact(appId: string, zipFilePath: string) {
@@ -19,20 +21,24 @@ export const createArtifactStore = (appsDir: string) => ({
         try {
             const zip = new AdmZip(zipFilePath)
 
-            rmSync(appDir, { recursive: true, force: true })
-            zip.extractAllTo(appDir)
+            await rm(appDir, { recursive: true, force: true })
+            await new Promise<void>((resolveExtract, rejectExtract) => {
+                zip.extractAllToAsync(appDir, true, false, error =>
+                    error ? rejectExtract(error) : resolveExtract(),
+                )
+            })
         } catch (error) {
-            rmSync(appDir, { recursive: true, force: true })
+            await rm(appDir, { recursive: true, force: true })
             throw error
         } finally {
-            rmSync(zipFilePath, { force: true })
+            await rm(zipFilePath, { force: true })
         }
 
         return appDir
     },
 
     async deleteAppDir(appId: string) {
-        rmSync(this.getAppDir(appId), { recursive: true, force: true })
+        await rm(this.getAppDir(appId), { recursive: true, force: true })
     },
 })
 
