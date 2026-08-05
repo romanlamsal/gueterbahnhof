@@ -17,7 +17,7 @@
   "license": "ISC",
   "dependencies": {
     "adm-zip": "^0.5.9",
-    "commander": "^9.4.1",
+    "cleye": "^2.6.0",
     "formdata-node": "^5.0.0",
     "got": "^12.5.2"
   },

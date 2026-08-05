@@ -14,7 +14,7 @@
   "devDependencies": {
     "@gueterbahnhof/client": "workspace:*",
     "@types/node": "^22.10.2",
-    "commander": "^9.4.1",
+    "cleye": "^2.6.0",
     "esbuild": "^0.15.13",
     "express": "^4.19.2",
     "server-tanstack": "workspace:*",

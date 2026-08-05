@@ -5,8 +5,6 @@ import got from "got"
 
 export type DeployTarget = { appName: string; host: string; apiKey?: string }
 
-export type PostArtifactArgs = DeployTarget & { wait?: boolean }
-
 export async function postArtifact(
     { appName, host, apiKey }: DeployTarget,
     directoryPath: string,
