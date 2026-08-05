@@ -32,10 +32,11 @@ jobs:
           npm install -g pnpm@10.24.0
           pnpm install
 
+      # Build through turbo so server-tanstack's .output exists before the
+      # cli bundle copies it into dist/.
       - name: Build
-        working-directory: packages/cli
         run: |
-          pnpm build
+          pnpm exec turbo run build --filter @lamsal-de/gueterbahnhof
 
       - name: 📣 Create Release Pull Request or Publish to npm
         id: changesets
