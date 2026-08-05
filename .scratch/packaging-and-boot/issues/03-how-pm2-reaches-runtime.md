@@ -1,7 +1,7 @@
 # 03 — How pm2 reaches runtime
 
 Type: grilling
-Status: open
+Status: resolved
 Blocked by: 01, 02
 
 ## Question
@@ -25,3 +25,14 @@ The option space has effectively collapsed to the **declared dependency**. 08 mo
 ## Added constraint (from 08)
 
 Since 08 chose an external daemon, the pm2 copy that **spawns** the daemon and the copy the **server** drives must be the same version — pm2 refuses a client whose version mismatches the running daemon. Any option that could end up with two different pm2 copies in play (e.g. a bundled copy alongside an operator-installed one) has to explain how versions stay aligned.
+
+## Answer
+
+**pm2 is a declared dependency of the published package**, at a caret range mirroring what `server-tanstack` builds against (`"pm2": "^6.0.14"`), written into `dist/package.json` by `bundle.js`.
+
+- **Who declares it:** `packages/cli/package.json` — the single published package (02).
+- **What ships:** `bundle.js` discards `dist/server-output/server/node_modules` after copying `.output`, since tracing cannot be disabled but the copy is safely removable (01). The bundle's bare `import "pm2"` then resolves by walking up to the installed package's own `node_modules`.
+- **Version alignment (08's constraint) holds:** exactly one installed copy exists, so the client that spawns the daemon and the client the server drives are the same pm2 by construction.
+- **Caret, not a pin:** patch and minor fixes reach hosts without a gueterbahnhof release; the alignment argument doesn't require a pin because both clients resolve the same installed copy either way.
+- **Hard dependency, not optional:** nothing works without pm2, so a failed install should fail loudly at install time rather than becoming a runtime surprise.
+- **"Zero runtime dependencies" is abandoned** deliberately (02) — it was self-imposed and it is what broke 1.0.0.

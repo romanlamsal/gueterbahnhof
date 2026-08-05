@@ -1,7 +1,7 @@
 # 05 — Implement 1.0.1 and prove it by clean install
 
 Type: task
-Status: open
+Status: claimed
 Blocked by: 03, 04
 
 ## Question
