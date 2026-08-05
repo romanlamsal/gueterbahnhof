@@ -32,9 +32,10 @@ jobs:
           path: '**/node_modules'
           key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
 
-      # npm trusted publishing (OIDC) requires npm >= 11.5.1; Node 22 bundles 10.x.
+      # npm trusted publishing (OIDC) requires npm >= 11.5.1; Node 22 bundles
+      # 10.x. npm@12 needs node >= 22.22.2, so stay on the 11 line.
       - name: Update npm for OIDC
-        run: npm install -g npm@latest
+        run: npm install -g npm@11
 
       # The changesets action writes a token-based ~/.npmrc when none exists,
       # which would preempt OIDC — give it a tokenless one to leave alone.
