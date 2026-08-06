@@ -1,5 +1,13 @@
 # @lamsal-de/gueterbahnhof
 
+## 1.2.0
+
+### Minor Changes
+
+-   **`gueterbahnhof logs`** — one place to read logs again, after running the server under systemd split them between journalctl and pm2. With no argument it tails the server's unit; with an app name it tails that app. `-n/--lines` (default 100), `-f/--follow` and `--errors` map onto both backends, and anything after `--` is forwarded raw, so `logs -- --since yesterday` or `logs my-app -- --raw` work without the command having to model two CLIs. `--unit` covers a differently named unit file, and pm2 is resolved from gueterbahnhof's own dependency so the client always matches the daemon it talks to.
+
+-   **Errors are now distinguishable in the journal.** systemd records a service's stdout *and* stderr at priority info unless a line begins with a syslog prefix, so `journalctl -p err` used to show nothing at all. When `JOURNAL_STREAM` is set — systemd's signal that it owns our output — `console.error` and `console.warn` emit `<3>` and `<4>`. `journalctl -p err` and the colouring in `systemctl status` now work, and a plain terminal run is unaffected.
+
 ## 1.1.0
 
 ### Minor Changes

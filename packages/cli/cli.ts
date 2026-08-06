@@ -4,6 +4,8 @@ import { existsSync, readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import createDeployCommand from "@gueterbahnhof/client/cli"
 import { cli } from "cleye"
+import { applyJournaldPriorityPrefixes } from "./journald-logging.js"
+import createLogsCommand from "./logs-command.js"
 import createServerCommand from "./server-command.js"
 import { loadServerConfigFile } from "./server-config.js"
 import createSystemdCommand from "./systemd-command.js"
@@ -39,11 +41,15 @@ const configPathFromArgv = (argv: string[]) => {
 
 loadServerConfigFile(configPathFromArgv(process.argv))
 
+// Under systemd, tag errors and warnings so `journalctl -p err` and
+// `systemctl status` can tell them apart from ordinary output.
+applyJournaldPriorityPrefixes()
+
 cli(
     {
         name: "gueterbahnhof",
         version,
-        commands: [createServerCommand(version), createDeployCommand(), createSystemdCommand()],
+        commands: [createServerCommand(version), createDeployCommand(), createLogsCommand(), createSystemdCommand()],
     },
     argv => {
         // No subcommand given.
