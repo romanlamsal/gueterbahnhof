@@ -1,9 +1,9 @@
 import { existsSync } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { bootFleet, shutdownFleet } from "server-tanstack/src/runtime/lifecycle.ts"
 import { command } from "cleye"
 import express from "express"
+import { bootFleet, shutdownFleet } from "server-tanstack/src/runtime/lifecycle.ts"
 
 const createServerCommand = (version?: string) =>
     command(
@@ -25,6 +25,11 @@ const createServerCommand = (version?: string) =>
                     type: String,
                     description: "api key for the management api (env: GUETERBAHNHOF_API_KEY)",
                     default: process.env.GUETERBAHNHOF_API_KEY ?? "",
+                },
+                config: {
+                    type: String,
+                    description: "path to the config file (default: ~/.gueterbahnhof); read before flags are resolved",
+                    default: "",
                 },
             },
             help: {

@@ -1,8 +1,8 @@
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http"
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http"
+import type { AddressInfo } from "node:net"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import type { AddressInfo } from "node:net"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { postArtifact, waitForDeployment } from "./postArtifact.js"
 
@@ -52,10 +52,7 @@ describe("postArtifact", () => {
         })
         server = stub.server
 
-        const result = await postArtifact(
-            { appName: "my-app", host: stub.host, apiKey: "key-1" },
-            artifactDir,
-        )
+        const result = await postArtifact({ appName: "my-app", host: stub.host, apiKey: "key-1" }, artifactDir)
 
         expect(result.deploymentId).toBe("dep-42")
         expect(stub.seen[0]).toMatchObject({ method: "POST", url: "/update/my-app", authorization: "key-1" })

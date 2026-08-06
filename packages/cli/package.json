@@ -1,12 +1,13 @@
 {
   "name": "@lamsal-de/gueterbahnhof",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "type": "module",
   "description": "",
   "bin": "./cli.js",
   "repository": "https://github.com/romanlamsal/gueterbahnhof",
   "scripts": {
-    "build": "node ./bundle.js"
+    "build": "node ./bundle.js",
+    "test": "vitest run"
   },
   "keywords": [],
   "author": "",
@@ -18,9 +19,13 @@
     "esbuild": "^0.25.12",
     "express": "^4.19.2",
     "server-tanstack": "workspace:*",
-    "typescript": "^5.5.4"
+    "typescript": "^5.5.4",
+    "vitest": "^3.2.4"
   },
   "publishConfig": {
     "directory": "./dist"
+  },
+  "dependencies": {
+    "dotenv": "^16.6.1"
   }
 }

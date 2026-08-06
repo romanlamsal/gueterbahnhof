@@ -2,8 +2,8 @@ import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { build } from "esbuild"
-import cliPackageJson from "./package.json" with { type: "json" }
 import serverPackageJson from "../server-tanstack/package.json" with { type: "json" }
+import cliPackageJson from "./package.json" with { type: "json" }
 
 const distFilePath = fileURLToPath(new URL("dist", import.meta.url))
 if (existsSync(distFilePath)) {

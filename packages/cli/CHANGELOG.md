@@ -1,5 +1,15 @@
 # @lamsal-de/gueterbahnhof
 
+## 1.1.0
+
+### Minor Changes
+
+-   **`gueterbahnhof systemd`** prints a systemd user unit for running the server — unit to stdout, install guidance to stderr, so `gueterbahnhof systemd > ~/.config/systemd/user/gueterbahnhof.service` is the whole install. It resolves the binary path itself, never embeds your API key, and reads back your `loginctl` lingering state, without which a user unit does not start at boot at all.
+
+    The generated unit runs the binary directly rather than through pm2, and sets `KillMode=process` with the reason inline: gueterbahnhof auto-spawns the pm2 daemon into the unit's cgroup, so systemd's default would SIGKILL that daemon along with every app it supervises — including processes gueterbahnhof never configured (ADR-0003).
+
+-   **Server Config can live in a file.** `~/.gueterbahnhof` (overridable with `--config`) is dotenv with the existing `GUETERBAHNHOF_*` keys, so no more wrapper scripts holding secrets. Precedence is flag → environment → file, it applies to `deploy` as well as `server`, and the same file doubles as a systemd `EnvironmentFile` if you prefer that route. A warning is printed when a file holding a secret is readable by others.
+
 ## 1.0.1
 
 ### Patch Changes

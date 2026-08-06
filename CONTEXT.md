@@ -20,6 +20,14 @@ _Avoid_: Publish, upload (alone), release
 A single artifact update for one app, from upload through extract and start to a terminal outcome (succeeded or failed). At most one deployment is in flight per app at a time.
 _Avoid_: Update (as a noun), rollout, release
 
+**Fleet**:
+All the Apps one Gueterbahnhof server manages, considered together — what boot reconciles and what a graceful shutdown stops. Excludes processes on the same host that this server did not configure.
+_Avoid_: The apps (when the collective is meant), cluster
+
+**Server Config**:
+The server's own settings — App Directory, port, API Key — as opposed to an App Config, which belongs to a single App. Supplied by flag, environment variable, or config file, in that order of precedence.
+_Avoid_: Config (unqualified), settings
+
 **App Config**:
 The persisted settings of an app: its name, its entry, and its env. Exists independently of whether an artifact has been deployed yet.
 _Avoid_: App settings, service config

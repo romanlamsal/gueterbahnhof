@@ -43,10 +43,9 @@ Label: wayfinder:map
 
 ## Not yet specified
 
-- **Release flow after the packaging shape changes** — whether the workflow still builds via turbo and publishes with changesets, and whether a second package needs its own publish step. Hangs on 02.
-- **Where `.output` is built** — CI each release vs prebuilt artifact. Hangs on 02.
-- **Static asset serving** after the boot decision (currently `express.static` over `server-output/public`). Hangs on 04.
-- **Reboot survival** — with the daemon holding the fleet, what starts things after a machine reboot: gueterbahnhof under systemd (our configs stay the single source of truth) or pm2's own `startup`/`resurrect` (a second source of truth). Surfaced by 08; sharpen once 05 is under way.
+*(Cleared 2026-08-06. The release flow and where `.output` is built were both answered in passing by 02/03 — one package, turbo builds the graph, changesets publishes. Static asset serving was settled by 04's subsumption: the express wrapper stayed, so `express.static` over `server-output/public` is simply what it is.)*
+
+- **Reboot survival** — graduated into its own effort: gueterbahnhof runs directly under systemd with our config files as the single source of truth, rather than pm2's `startup`/`resurrect`. Decided and specced in [`.scratch/systemd-unit-command/spec.md`](../systemd-unit-command/spec.md).
 
 ## Out of scope
 
