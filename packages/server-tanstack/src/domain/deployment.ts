@@ -44,5 +44,3 @@ export const isTerminal = (deployment: Deployment) => allowedTransitions[deploym
 // At most one Deployment is in flight per app (ADR-0001).
 export const isInFlight = (deployment: Deployment | undefined): deployment is Deployment =>
     !!deployment && !isTerminal(deployment)
-
-export const canStartDeployment = (activeDeployment: Deployment | undefined) => !isInFlight(activeDeployment)

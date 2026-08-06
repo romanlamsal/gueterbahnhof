@@ -10,6 +10,8 @@ import createServerCommand from "./server-command.js"
 import { loadServerConfigFile } from "./server-config.js"
 import createSystemdCommand from "./systemd-command.js"
 
+// Published, the manifest sits beside cli.js; in the workspace it is one level
+// up. Failing loudly beats reporting an undefined version.
 function getPackageJson() {
     for (const relativePath of ["../package.json", "./package.json"]) {
         const absoluteUrl = fileURLToPath(
@@ -22,6 +24,8 @@ function getPackageJson() {
             return absoluteUrl
         }
     }
+
+    throw new Error("Could not find gueterbahnhof's package.json — this is a packaging error.")
 }
 
 const version = JSON.parse(readFileSync(getPackageJson()).toString()).version

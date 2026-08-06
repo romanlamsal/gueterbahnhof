@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { type AppConfigPatch, AppConfigForm, type SaveOutcome } from "./AppConfigForm.tsx"
+import { AppConfigForm, type AppConfigPatch, type SaveOutcome } from "./AppConfigForm.tsx"
 
 // Both bugs this component was written to fix were handlers that silently went
 // missing rather than logic errors, so these tests drive it like an operator.
@@ -96,8 +96,14 @@ describe("AppConfigForm", () => {
     })
 
     it("disables the button while the save is in flight", async () => {
-        let release = () => {}
-        const onSave = vi.fn(() => new Promise<SaveOutcome>(resolve => (release = () => resolve({ ok: true }))))
+        // Held open so the button can be observed mid-save, then released.
+        let release!: (outcome: SaveOutcome) => void
+        const onSave = vi.fn(
+            () =>
+                new Promise<SaveOutcome>(resolve => {
+                    release = resolve
+                }),
+        )
         renderForm({ onSave })
 
         save()
@@ -105,7 +111,7 @@ describe("AppConfigForm", () => {
         const button = screen.getByRole("button", { name: "Save" }) as HTMLButtonElement
         await waitFor(() => expect(button.disabled).toBe(true))
 
-        release()
+        release({ ok: true })
         await waitFor(() => expect(button.disabled).toBe(false))
     })
 

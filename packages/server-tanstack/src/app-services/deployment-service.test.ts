@@ -1,11 +1,12 @@
 import { describe, expect, it, vi } from "vitest"
 import type { AppConfig } from "@/interface-services/app-config-repository.ts"
+import type { ProcessOutcome } from "@/interface-services/process-manager.ts"
 import { createDeploymentService } from "./deployment-service.ts"
 
 const makeFakes = ({
     configs = [{ id: "id-1", name: "my-app", entry: "index.js", env: { FOO: "bar" } }],
     extract = vi.fn(async () => "/extracted/id-1"),
-    start = vi.fn(async () => ({}) as unknown),
+    start = vi.fn(async () => ({ ok: true }) as ProcessOutcome),
     processRunning = true,
 }: {
     configs?: AppConfig[]
@@ -28,10 +29,10 @@ const makeFakes = ({
             }),
         },
         processManager: {
-            getAppProcess: vi.fn(async () => (processRunning ? {} : undefined)),
+            getAppProcess: vi.fn(async (name: string) => (processRunning ? { name, status: "online" } : undefined)),
             stopAppProcess: vi.fn(async () => {
                 calls.push("stop")
-                return {}
+                return { ok: true } as const
             }),
             startAppProcess: vi.fn(async (...args: unknown[]) => {
                 calls.push("start")
@@ -42,7 +43,7 @@ const makeFakes = ({
     }
 
     return {
-        deps: deps as unknown as Parameters<typeof createDeploymentService>[0],
+        deps: deps as Parameters<typeof createDeploymentService>[0],
         extract: deps.artifactStore.extractArtifact,
         start: deps.processManager.startAppProcess,
         rawStart: start,
@@ -162,23 +163,8 @@ describe("deploymentService", () => {
     })
 
     it("fails the deployment when the process does not start", async () => {
-        const { deps } = makeFakes({ start: vi.fn(async () => undefined) })
-        const service = createDeploymentService(deps)
-
-        const result = await service.requestDeployment("my-app", "/tmp/upload.zip")
-        if (!result.ok) {
-            throw new Error("unreachable")
-        }
-
-        const deployment = await result.completed
-        expect(deployment.state).toBe("failed")
-        expect(deployment.reason).toMatch(/start/i)
-        expect(service.getLatestDeployment("my-app")?.state).toBe("failed")
-    })
-
-    it("fails the deployment when the app has no entry configured", async () => {
-        const { deps, start } = makeFakes({
-            configs: [{ id: "id-1", name: "my-app", env: {} }],
+        const { deps } = makeFakes({
+            start: vi.fn(async () => ({ ok: false, reason: "pm2 refused" }) as ProcessOutcome),
         })
         const service = createDeploymentService(deps)
 
@@ -189,8 +175,26 @@ describe("deploymentService", () => {
 
         const deployment = await result.completed
         expect(deployment.state).toBe("failed")
-        expect(deployment.reason).toMatch(/entry/i)
-        expect(start).not.toHaveBeenCalled()
+        expect(deployment.reason).toMatch(/did not start/i)
+        expect(service.getLatestDeployment("my-app")?.state).toBe("failed")
+    })
+
+    it("fails the deployment with the reason the process manager gave", async () => {
+        const { deps, start } = makeFakes({
+            configs: [{ id: "id-1", name: "my-app", env: {} }],
+            start: vi.fn(async () => ({ ok: false, reason: "no Entry configured" }) as ProcessOutcome),
+        })
+        const service = createDeploymentService(deps)
+
+        const result = await service.requestDeployment("my-app", "/tmp/upload.zip")
+        if (!result.ok) {
+            throw new Error("unreachable")
+        }
+
+        const deployment = await result.completed
+        expect(deployment.state).toBe("failed")
+        expect(deployment.reason).toMatch(/no Entry configured/i)
+        expect(start).toHaveBeenCalled()
     })
 
     it("keeps only the last 5 deployments per app", async () => {

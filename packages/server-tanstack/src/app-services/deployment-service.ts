@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto"
 import { createDeployment, type Deployment, isInFlight, transitionDeployment } from "@/domain/deployment.ts"
 import type { AppConfig, AppConfigRepository } from "@/interface-services/app-config-repository.ts"
 import type { ArtifactStore } from "@/interface-services/artifact-store.ts"
-import { type ProcessManager, toProcessSpec } from "@/interface-services/pm2-process-manager.ts"
+import { type ProcessManager, toProcessSpec } from "@/interface-services/process-manager.ts"
 
 // Deployment records are in-memory only, capped per app (ADR-0001).
 const MAX_DEPLOYMENTS_PER_APP = 5
@@ -62,14 +62,11 @@ export const createDeploymentService = ({
 
         current = transition(current, "starting")
 
-        if (!config.entry) {
-            return transition(current, "failed", "No entry configured.")
-        }
+        // The Process Manager reports why, including "no Entry configured".
+        const started = await processManager.startAppProcess(toProcessSpec(config, artifactStore.getAppDir(config.id)))
 
-        const proc = await processManager.startAppProcess(toProcessSpec(config, artifactStore.getAppDir(config.id)))
-
-        if (!proc) {
-            return transition(current, "failed", "The process failed to start.")
+        if (!started.ok) {
+            return transition(current, "failed", `The app did not start: ${started.reason}.`)
         }
 
         return transition(current, "succeeded")

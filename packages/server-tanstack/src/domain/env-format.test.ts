@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { formatEnvs, parseEnvs } from "./dotenv-roundtrip.ts"
+import { formatEnvs, parseEnvs } from "./env-format.ts"
 
 const roundTrip = (envs: [string, string][], escaped = false) => parseEnvs(formatEnvs(envs, escaped), escaped)
 

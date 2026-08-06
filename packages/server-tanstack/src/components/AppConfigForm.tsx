@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button.tsx"
 import { Input } from "@/components/ui/input.tsx"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.tsx"
 import { Textarea } from "@/components/ui/textarea.tsx"
+import { formatEnvs, parseEnvs } from "@/domain/env-format.ts"
 import type { AppConfig } from "@/interface-services/app-config-repository.ts"
-import { formatEnvs, parseEnvs } from "@/lib/dotenv-roundtrip.ts"
 
 export type AppConfigPatch = Pick<AppConfig, "name" | "entry" | "env">
 export type SaveOutcome = { ok: true } | { ok: false; message: string }

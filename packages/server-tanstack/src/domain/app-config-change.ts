@@ -1,12 +1,10 @@
 import type { AppConfig } from "@/interface-services/app-config-repository.ts"
 
-// What a config save means for the running process:
-// - 'none': nothing process-relevant changed
-// - 'restart': stop the old process, start with the new spec
-// - 'recreate': stop AND delete the process before starting — pm2 caches env
-//   on the process, a plain restart would keep the old values
-export type RestartDecision = "none" | "restart" | "recreate"
-
+// Does a saved App Config change require the process to be recreated?
+//
+// Recreated, never restarted: pm2 keeps the environment a process was started
+// with, so a restart can silently run an App with stale Env (ADR-0003). The
+// caller asks one question, so this answers one.
 const envChanged = (prev: AppConfig["env"], next: AppConfig["env"]) => {
     const prevKeys = Object.keys(prev)
     const nextKeys = Object.keys(next)
@@ -14,14 +12,5 @@ const envChanged = (prev: AppConfig["env"], next: AppConfig["env"]) => {
     return prevKeys.length !== nextKeys.length || prevKeys.some(key => prev[key] !== next[key])
 }
 
-export const decideRestart = (prev: AppConfig, next: AppConfig): RestartDecision => {
-    if (envChanged(prev.env, next.env)) {
-        return "recreate"
-    }
-
-    if (prev.name !== next.name || prev.entry !== next.entry) {
-        return "restart"
-    }
-
-    return "none"
-}
+export const needsRecreate = (prev: AppConfig, next: AppConfig) =>
+    envChanged(prev.env, next.env) || prev.name !== next.name || prev.entry !== next.entry

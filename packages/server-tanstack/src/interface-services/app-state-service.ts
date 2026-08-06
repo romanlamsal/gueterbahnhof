@@ -1,71 +1,47 @@
-import pm2, { type Proc } from "pm2"
-import { z } from "zod"
-import { createTypedEventEmitter } from "@/kit/typed-event-emitter.ts"
-import { connectProcessManager } from "./pm2-process-manager.ts"
+import { EventEmitter } from "node:events"
+import type { ProcessEvents } from "./process-events.ts"
 
-const AppStateEventSchema = z.object({
-    type: z.literal("update-state"),
-    appName: z.string(),
-    // Raw pm2 process state — consumers treat events as refetch triggers, so
-    // any state string is worth forwarding.
-    state: z.string().default("pending"),
-})
+// Broadcasts App State changes to whoever is listening — today the SSE stream.
+// A factory rather than a singleton, so its subscription and its memory of the
+// last known state live in a closure a test can create fresh.
 
-const lastKnownState = new Map<string, string>()
-
-const eventEmitter = createTypedEventEmitter(AppStateEventSchema)
-
-// Subscribing to the daemon's bus is lazy and idempotent: the first SSE client
-// triggers it, since nothing else needs it (ADR-0003).
-let busSubscription: Promise<void> | undefined
-
-const subscribeToBus = async () => {
-    await connectProcessManager()
-
-    return new Promise<void>(resolve => {
-        pm2.launchBus((err, pm2Bus) => {
-            if (err) {
-                console.log("Error opening bus:", err)
-                return resolve()
-            }
-
-            pm2Bus.on("process:event", (event: { event: string; process: Proc }) => {
-                const { data: appStateEvent } = AppStateEventSchema.safeParse({
-                    type: "update-state",
-                    appName: event.process.name,
-                    state: event.process.status,
-                })
-
-                if (!appStateEvent || lastKnownState.get(appStateEvent.appName) === appStateEvent.state) {
-                    return
-                }
-
-                lastKnownState.set(appStateEvent.appName, appStateEvent.state)
-                eventEmitter.emit(appStateEvent)
-            })
-
-            resolve()
-        })
-    })
+export type AppStateBus = {
+    /** Opens the subscription; idempotent, so the first listener can call it. */
+    init(): Promise<void>
+    addListener(cb: (appName: string, nextState: string) => void, signal?: AbortSignal): void
 }
 
-export const appStateService = {
-    init() {
-        busSubscription ??= subscribeToBus().catch(error => {
-            busSubscription = undefined
-            console.error("Could not subscribe to the pm2 event bus:", error)
-        })
+const STATE_CHANGED = "state-changed"
 
-        return busSubscription
-    },
+export const createAppStateBus = ({ processEvents }: { processEvents: ProcessEvents }): AppStateBus => {
+    const emitter = new EventEmitter()
+    const lastKnownState = new Map<string, string>()
+    let subscription: Promise<void> | undefined
 
-    addListener(cb: (appName: string, nextState: string) => void, signal?: AbortSignal) {
-        eventEmitter.on(
-            "update-state",
-            ({ appName, state }) => {
-                cb(appName, state)
-            },
-            signal,
-        )
-    },
+    return {
+        init() {
+            subscription ??= processEvents
+                .subscribe(({ name, status }) => {
+                    // Only genuine changes are worth waking the UI for.
+                    if (lastKnownState.get(name) === status) {
+                        return
+                    }
+
+                    lastKnownState.set(name, status)
+                    emitter.emit(STATE_CHANGED, name, status)
+                })
+                .catch(error => {
+                    subscription = undefined
+                    console.error("Could not subscribe to process events:", error)
+                })
+
+            return subscription
+        },
+
+        addListener(cb, signal) {
+            emitter.on(STATE_CHANGED, cb)
+
+            signal?.addEventListener("abort", () => emitter.off(STATE_CHANGED, cb))
+        },
+    }
 }

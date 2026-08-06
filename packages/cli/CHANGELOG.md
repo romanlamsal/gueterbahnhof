@@ -1,5 +1,15 @@
 # @lamsal-de/gueterbahnhof
 
+## 1.3.1
+
+### Patch Changes
+
+-   **Internal only — nothing about running gueterbahnhof changes.** An architecture pass over the server package: the four seams it talks to the outside world through (the Process Manager, process events, the App Config repository and the artifact store) are now hand-written interfaces rather than shapes inferred from their implementations, the object graph is wired in one place, and route guards are applied through a wrapper so a handler cannot be left half-guarded. Env formatting moved into the domain, and some dead exports went away.
+
+    No endpoint, flag, config key or output changed. The whole surface was exercised against a packaged install before release — guarded and unguarded requests, a real deploy, and the shutdown contract where the fleet stops but the pm2 daemon and processes gueterbahnhof never configured keep running. Upgrade for nothing in particular; skip it just as safely.
+
+    Two small things did change while the pass was underway: the CLI package now typechecks under `strict`, which is how it is compiled everywhere else, and a version lookup that could silently report `undefined` on a broken install now fails with a clear message instead.
+
 ## 1.3.0
 
 ### Minor Changes

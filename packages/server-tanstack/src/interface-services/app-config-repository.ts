@@ -12,102 +12,112 @@ export const AppConfigSchema = z.object({
 
 export type AppConfig = z.infer<typeof AppConfigSchema>
 
+// The port, written by hand from what callers use. Where each App Config file
+// lives is the implementation's business, so it is not on here.
+export type AppConfigRepository = {
+    createAppConfig(appId: string, name: string, env?: AppConfig["env"]): Promise<AppConfig | undefined>
+    getAppConfig(appId: string): Promise<AppConfig | undefined>
+    updateAppConfig(appId: string, appConfig: Partial<AppConfig>): Promise<[AppConfig, AppConfig] | undefined>
+    deleteAppConfig(appId: string): Promise<void>
+    findAppConfigByName(name: string): Promise<AppConfig | undefined>
+    listAppConfigs(): Promise<AppConfig[]>
+}
+
 const readFileOrUndefined = (filePath: string) => readFile(filePath, "utf8").catch(() => undefined)
 
-export const createAppConfigRepository = (appsDir: string) => ({
-    getConfigPath(appId: string) {
-        return join(appsDir, `${appId}.json`)
-    },
+export const createAppConfigRepository = (appsDir: string): AppConfigRepository => {
+    const configPath = (appId: string) => join(appsDir, `${appId}.json`)
+    const envSidecarPath = (appId: string) => join(appsDir, `${appId}.env`)
 
-    async createAppConfig(appId: string, name: string, env?: AppConfig["env"]) {
-        const currConfig = await this.getAppConfig(appId)
+    const repository: AppConfigRepository = {
+        async createAppConfig(appId, name, env) {
+            const currConfig = await repository.getAppConfig(appId)
 
-        if (currConfig) {
-            console.error("Config already exists, abort.")
-            return
-        }
-
-        const newConfig = AppConfigSchema.parse({ id: appId, name, env } satisfies z.input<typeof AppConfigSchema>)
-
-        await writeFile(this.getConfigPath(appId), JSON.stringify(newConfig, null, 2))
-
-        return newConfig
-    },
-
-    async getAppConfig(appId: string) {
-        const raw = await readFileOrUndefined(this.getConfigPath(appId))
-
-        if (raw === undefined) {
-            return
-        }
-
-        let parsed: unknown
-        try {
-            parsed = JSON.parse(raw)
-        } catch (error) {
-            console.error("Invalid config (not JSON):", error)
-            return
-        }
-
-        const validation = AppConfigSchema.safeParse(parsed)
-
-        if (!validation.success) {
-            console.error("Invalid config:", validation.error)
-            return
-        }
-
-        const envFileContent = await readFileOrUndefined(join(appsDir, `${appId}.env`))
-        if (envFileContent !== undefined) {
-            validation.data.env = {
-                ...(validation.data.env ?? {}),
-                ...parse(envFileContent),
+            if (currConfig) {
+                console.error("Config already exists, abort.")
+                return
             }
-        }
 
-        return validation.data
-    },
+            const newConfig = AppConfigSchema.parse({ id: appId, name, env } satisfies z.input<typeof AppConfigSchema>)
 
-    async updateAppConfig(appId: string, appConfig: Partial<AppConfig>): Promise<[AppConfig, AppConfig] | void> {
-        const currentConfig = await this.getAppConfig(appId)
+            await writeFile(configPath(appId), JSON.stringify(newConfig, null, 2))
 
-        if (!currentConfig) {
-            console.error("Cannot update app config: does not exist.")
-            return
-        }
+            return newConfig
+        },
 
-        const validation = AppConfigSchema.safeParse({ ...currentConfig, ...appConfig })
+        async getAppConfig(appId) {
+            const raw = await readFileOrUndefined(configPath(appId))
 
-        if (!validation.success) {
-            console.error("Cannot update app config: Parse error:", validation.error)
-            return
-        }
+            if (raw === undefined) {
+                return
+            }
 
-        await writeFile(this.getConfigPath(appId), JSON.stringify(validation.data, null, 2))
+            let parsed: unknown
+            try {
+                parsed = JSON.parse(raw)
+            } catch (error) {
+                console.error("Invalid config (not JSON):", error)
+                return
+            }
 
-        return [currentConfig, validation.data] as const
-    },
+            const validation = AppConfigSchema.safeParse(parsed)
 
-    async deleteAppConfig(appId: string) {
-        await rm(this.getConfigPath(appId), { force: true })
-        await rm(join(appsDir, `${appId}.env`), { force: true })
-    },
+            if (!validation.success) {
+                console.error("Invalid config:", validation.error)
+                return
+            }
 
-    async findAppConfigByName(name: string) {
-        const configs = await this.listAppConfigs()
-        return configs.find(config => config.name === name)
-    },
+            const envFileContent = await readFileOrUndefined(envSidecarPath(appId))
+            if (envFileContent !== undefined) {
+                validation.data.env = {
+                    ...(validation.data.env ?? {}),
+                    ...parse(envFileContent),
+                }
+            }
 
-    async listAppConfigs() {
-        const configFiles = await readdir(appsDir)
+            return validation.data
+        },
 
-        return Promise.all(
-            configFiles
-                .filter(fileName => fileName.endsWith(".json"))
-                .map(fileName => {
-                    return this.getAppConfig(fileName.replace(".json", ""))
-                }),
-        ).then(appConfigs => appConfigs.filter(appConfig => !!appConfig))
-    },
-})
+        async updateAppConfig(appId, appConfig) {
+            const currentConfig = await repository.getAppConfig(appId)
 
-export type AppConfigRepository = ReturnType<typeof createAppConfigRepository>
+            if (!currentConfig) {
+                console.error("Cannot update app config: does not exist.")
+                return
+            }
+
+            const validation = AppConfigSchema.safeParse({ ...currentConfig, ...appConfig })
+
+            if (!validation.success) {
+                console.error("Cannot update app config: Parse error:", validation.error)
+                return
+            }
+
+            await writeFile(configPath(appId), JSON.stringify(validation.data, null, 2))
+
+            return [currentConfig, validation.data]
+        },
+
+        async deleteAppConfig(appId) {
+            await rm(configPath(appId), { force: true })
+            await rm(envSidecarPath(appId), { force: true })
+        },
+
+        async findAppConfigByName(name) {
+            const configs = await repository.listAppConfigs()
+            return configs.find(config => config.name === name)
+        },
+
+        async listAppConfigs() {
+            const configFiles = await readdir(appsDir)
+
+            return Promise.all(
+                configFiles
+                    .filter(fileName => fileName.endsWith(".json"))
+                    .map(fileName => repository.getAppConfig(fileName.replace(".json", ""))),
+            ).then(appConfigs => appConfigs.filter(appConfig => !!appConfig))
+        },
+    }
+
+    return repository
+}

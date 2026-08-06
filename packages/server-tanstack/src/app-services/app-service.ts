@@ -1,9 +1,9 @@
-import { decideRestart } from "@/domain/app-config-change.ts"
+import { needsRecreate } from "@/domain/app-config-change.ts"
 import { deriveAppState } from "@/domain/app-state.ts"
 import { findOrphanProcessNames } from "@/domain/fleet.ts"
 import type { AppConfig, AppConfigRepository } from "@/interface-services/app-config-repository.ts"
 import type { ArtifactStore } from "@/interface-services/artifact-store.ts"
-import { type ProcessManager, toProcessSpec } from "@/interface-services/pm2-process-manager.ts"
+import { type ProcessManager, toProcessSpec } from "@/interface-services/process-manager.ts"
 
 export type AppMutationResult =
     | { ok: true; config: AppConfig }
@@ -36,12 +36,14 @@ export const createAppService = ({
         async reconcileFleet() {
             const configs = await configRepository.listAppConfigs()
 
-            const started = await Promise.all(configs.map(config => processManager.recreateAppProcess(specFor(config))))
+            const outcomes = await Promise.all(
+                configs.map(config => processManager.recreateAppProcess(specFor(config))),
+            )
 
             const runningFleet = await processManager.listFleetProcesses()
             const orphans = findOrphanProcessNames(
                 configs.map(config => config.name),
-                runningFleet.map(proc => proc.name).filter((name): name is string => !!name),
+                runningFleet.map(proc => proc.name),
             )
 
             for (const orphanName of orphans) {
@@ -50,8 +52,16 @@ export const createAppService = ({
                 await processManager.deleteAppProcess(orphanName)
             }
 
+            const failures = configs
+                .map((config, index) => ({ config, outcome: outcomes[index] }))
+                .filter(({ outcome }) => !outcome?.ok)
+
+            for (const { config, outcome } of failures) {
+                console.warn(`Did not start '${config.name}': ${outcome?.ok === false ? outcome.reason : "unknown"}.`)
+            }
+
             console.log(
-                `Started ${started.filter(Boolean).length} of ${configs.length} apps` +
+                `Started ${outcomes.length - failures.length} of ${configs.length} apps` +
                     (orphans.length ? `, reclaimed ${orphans.length} orphan(s).` : "."),
             )
         },
@@ -61,9 +71,9 @@ export const createAppService = ({
         async stopFleet() {
             const configs = await configRepository.listAppConfigs()
 
-            const stopped = await Promise.all(configs.map(config => processManager.deleteAppProcess(config.name)))
+            const outcomes = await Promise.all(configs.map(config => processManager.deleteAppProcess(config.name)))
 
-            console.log(`Stopped ${stopped.filter(Boolean).length} of ${configs.length} apps.`)
+            console.log(`Stopped ${outcomes.filter(outcome => outcome.ok).length} of ${configs.length} apps.`)
         },
 
         async listApps() {
@@ -71,13 +81,11 @@ export const createAppService = ({
 
             return Promise.all(
                 configs.map(async config => {
-                    const processStatus = await processManager
-                        .getAppProcess(config.name)
-                        .then(procDescription => procDescription?.pm2_env?.status)
+                    const managed = await processManager.getAppProcess(config.name)
 
                     return {
                         config,
-                        state: deriveAppState(processStatus, await artifactStore.hasArtifact(config.id)),
+                        state: deriveAppState(managed?.status, await artifactStore.hasArtifact(config.id)),
                     }
                 }),
             )
@@ -97,17 +105,6 @@ export const createAppService = ({
             }
 
             return { ok: true, config }
-        },
-
-        async startOrReload(appId: string) {
-            const config = await configRepository.getAppConfig(appId)
-
-            if (!config) {
-                console.error(`Failed to start app with id '${appId}': no config.`)
-                return
-            }
-
-            return processManager.recreateAppProcess(specFor(config))
         },
 
         async updateAppConfig(appId: string, partial: Partial<AppConfig>): Promise<AppMutationResult> {
@@ -133,10 +130,7 @@ export const createAppService = ({
                 return { ok: true, config: currConfig }
             }
 
-            // decideRestart still distinguishes restart from recreate to record
-            // *why* a change matters, but both are applied by recreating: the
-            // env-staleness argument holds for every restart.
-            if (decideRestart(prevConfig, currConfig) !== "none") {
+            if (needsRecreate(prevConfig, currConfig)) {
                 if (prevConfig.name !== currConfig.name) {
                     // Nothing stray: the old name would otherwise linger.
                     await processManager.stopAppProcess(prevConfig.name)

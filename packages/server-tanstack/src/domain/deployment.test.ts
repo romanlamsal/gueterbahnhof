@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest"
-import {
-    canStartDeployment,
-    createDeployment,
-    type Deployment,
-    isTerminal,
-    transitionDeployment,
-} from "./deployment.ts"
+import { createDeployment, type Deployment, isInFlight, isTerminal, transitionDeployment } from "./deployment.ts"
 
 describe("deployment lifecycle", () => {
     it("starts in 'extracting'", () => {
@@ -61,11 +55,10 @@ describe("deployment lifecycle", () => {
         expect(isTerminal({ id: "d", appName: "a", state: "failed" })).toBe(true)
     })
 
-    it("allows a new deployment only when none is active", () => {
-        expect(canStartDeployment(undefined)).toBe(true)
-        expect(canStartDeployment({ id: "d", appName: "a", state: "succeeded" })).toBe(true)
-        expect(canStartDeployment({ id: "d", appName: "a", state: "failed" })).toBe(true)
-        expect(canStartDeployment({ id: "d", appName: "a", state: "extracting" })).toBe(false)
-        expect(canStartDeployment({ id: "d", appName: "a", state: "starting" })).toBe(false)
+    it("knows which deployments are still in flight", () => {
+        expect(isInFlight(undefined)).toBe(false)
+        expect(isInFlight({ id: "d", appName: "a", state: "succeeded" })).toBe(false)
+        expect(isInFlight({ id: "d", appName: "a", state: "extracting" })).toBe(true)
+        expect(isInFlight({ id: "d", appName: "a", state: "starting" })).toBe(true)
     })
 })

@@ -1,14 +1,15 @@
 import { describe, expect, it, vi } from "vitest"
-import type { AppConfig } from "@/interface-services/app-config-repository.ts"
+import type { AppConfig, AppConfigRepository } from "@/interface-services/app-config-repository.ts"
+import type { ManagedProcess, ProcessManager } from "@/interface-services/process-manager.ts"
 import { createAppService } from "./app-service.ts"
 
 const makeFakes = (
     initialConfigs: AppConfig[] = [],
-    { processExists = true, runningFleet = [] as { name?: string }[] } = {},
+    { processExists = true, runningFleet = [] as ManagedProcess[] } = {},
 ) => {
     const configs = new Map(initialConfigs.map(config => [config.id, structuredClone(config)]))
 
-    const configRepository = {
+    const configRepository: AppConfigRepository = {
         async getAppConfig(appId: string) {
             return configs.get(appId)
         },
@@ -20,7 +21,7 @@ const makeFakes = (
             configs.set(appId, config)
             return config
         },
-        async updateAppConfig(appId: string, partial: Partial<AppConfig>): Promise<[AppConfig, AppConfig] | void> {
+        async updateAppConfig(appId: string, partial: Partial<AppConfig>): Promise<[AppConfig, AppConfig] | undefined> {
             const current = configs.get(appId)
             if (!current) {
                 return
@@ -40,26 +41,24 @@ const makeFakes = (
         },
     }
 
-    const processManager = {
-        getAppProcess: vi.fn(async () => (processExists ? { pm2_env: { status: "online" } } : undefined)),
+    const ok = { ok: true } as const
+
+    const processManager: ProcessManager = {
+        getAppProcess: vi.fn(async (name: string) => (processExists ? { name, status: "online" } : undefined)),
         listFleetProcesses: vi.fn(async () => runningFleet),
-        startAppProcess: vi.fn(async () => ({})),
-        stopAppProcess: vi.fn(async () => ({})),
-        deleteAppProcess: vi.fn(async () => ({})),
-        recreateAppProcess: vi.fn(async () => ({})),
+        startAppProcess: vi.fn(async () => ok),
+        stopAppProcess: vi.fn(async () => ok),
+        deleteAppProcess: vi.fn(async () => ok),
+        recreateAppProcess: vi.fn(async () => ok),
     }
 
     const artifactStore = {
         getAppDir: (appId: string) => `/apps/${appId}`,
         deleteAppDir: vi.fn(async () => undefined),
-        hasArtifact: vi.fn(async () => true),
+        hasArtifact: vi.fn(async (_appId: string) => true),
     }
 
-    const service = createAppService({
-        configRepository: configRepository as never,
-        processManager: processManager as never,
-        artifactStore: artifactStore as never,
-    })
+    const service = createAppService({ configRepository, processManager, artifactStore })
 
     return { service, configRepository, processManager, artifactStore, configs }
 }
@@ -86,7 +85,10 @@ describe("appService.reconcileFleet", () => {
 
     it("reclaims labelled processes that have no config", async () => {
         const { service, processManager } = makeFakes([baseConfig], {
-            runningFleet: [{ name: "my-app" }, { name: "stale-app" }],
+            runningFleet: [
+                { name: "my-app", status: "online" },
+                { name: "stale-app", status: "online" },
+            ],
         })
 
         await service.reconcileFleet()
@@ -97,7 +99,9 @@ describe("appService.reconcileFleet", () => {
     })
 
     it("leaves foreign processes alone — only labelled ones are listed", async () => {
-        const { service, processManager } = makeFakes([baseConfig], { runningFleet: [{ name: "my-app" }] })
+        const { service, processManager } = makeFakes([baseConfig], {
+            runningFleet: [{ name: "my-app", status: "online" }],
+        })
 
         await service.reconcileFleet()
 
@@ -205,7 +209,7 @@ describe("appService.createApp", () => {
 describe("appService.listApps", () => {
     it("derives each app's state from process status and artifact presence", async () => {
         const { service, artifactStore } = makeFakes([baseConfig, { id: "id-2", name: "empty-app", env: {} }])
-        artifactStore.hasArtifact.mockImplementation((async (appId: string) => appId === "id-1") as never)
+        artifactStore.hasArtifact.mockImplementation(async appId => appId === "id-1")
 
         expect(await service.listApps()).toEqual([
             { config: expect.objectContaining({ id: "id-1" }), state: "online" },

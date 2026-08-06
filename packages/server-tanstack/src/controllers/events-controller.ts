@@ -1,12 +1,8 @@
-import type { appStateService } from "@/interface-services/app-state-service.ts"
+import type { AppStateBus } from "@/interface-services/app-state-service.ts"
 
 // Streams app state changes as server-sent events. The payload is a trigger,
 // not a source of truth — clients refetch the app list on every event.
-export const createEventsController = ({
-    appStateEvents,
-}: {
-    appStateEvents: Pick<typeof appStateService, "addListener" | "init">
-}) => ({
+export const createEventsController = ({ appStateEvents }: { appStateEvents: AppStateBus }) => ({
     getEventStream(request: Request): Response {
         // First subscriber opens the daemon's event bus; idempotent thereafter.
         appStateEvents.init()

@@ -2,8 +2,9 @@ import { createFileRoute, redirect } from "@tanstack/react-router"
 import { useRef, useState } from "react"
 import { Button } from "@/components/ui/button.tsx"
 import { Input } from "@/components/ui/input.tsx"
+import { guarded } from "@/controllers/guarded.ts"
 import { getSessionStatusFunc } from "@/routes/ui/-lib/auth-funcs.ts"
-import { getAuthController, getDeployController } from "@/runtime/services.ts"
+import { getDeployController } from "@/runtime/services.ts"
 
 export const Route = createFileRoute("/update/$appName")({
     component: UpdateAppArtifactPage,
@@ -16,16 +17,11 @@ export const Route = createFileRoute("/update/$appName")({
     },
     server: {
         handlers: {
-            POST({ request, params }) {
-                // CLI deploys send the key header; the upload form below rides
-                // on the UI session cookie.
-                const denied = getAuthController().requireApiKeyOrSession(request)
-                if (denied) {
-                    return denied
-                }
-
-                return getDeployController().postUpdate(request, params.appName)
-            },
+            // CLI deploys send the key header; the upload form below rides on
+            // the UI session cookie.
+            POST: guarded.apiKeyOrSession(({ request, params }) =>
+                getDeployController().postUpdate(request, params.appName),
+            ),
         },
     },
 })
