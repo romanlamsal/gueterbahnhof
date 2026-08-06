@@ -26,8 +26,10 @@ describe("apps controller: GET /apps", () => {
 describe("events controller: SSE stream", () => {
     it("streams app state changes as SSE frames and closes on abort", async () => {
         const listeners: ((appName: string, status: string) => void)[] = []
+        const init = vi.fn(async () => undefined)
         const controller = createEventsController({
             appStateEvents: {
+                init,
                 addListener: (cb, signal) => {
                     listeners.push(cb)
                     signal?.addEventListener("abort", () => {
@@ -42,6 +44,8 @@ describe("events controller: SSE stream", () => {
 
         const response = controller.getEventStream(request)
         expect(response.headers.get("content-type")).toBe("text/event-stream")
+        // the first subscriber opens the daemon's event bus
+        expect(init).toHaveBeenCalled()
 
         const reader = (response.body as ReadableStream<Uint8Array>).getReader()
         const decoder = new TextDecoder()

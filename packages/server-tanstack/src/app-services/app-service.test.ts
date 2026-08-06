@@ -2,7 +2,10 @@ import { describe, expect, it, vi } from "vitest"
 import type { AppConfig } from "@/interface-services/app-config-repository.ts"
 import { createAppService } from "./app-service.ts"
 
-const makeFakes = (initialConfigs: AppConfig[] = [], { processExists = true } = {}) => {
+const makeFakes = (
+    initialConfigs: AppConfig[] = [],
+    { processExists = true, runningFleet = [] as { name?: string }[] } = {},
+) => {
     const configs = new Map(initialConfigs.map(config => [config.id, structuredClone(config)]))
 
     const configRepository = {
@@ -39,10 +42,11 @@ const makeFakes = (initialConfigs: AppConfig[] = [], { processExists = true } = 
 
     const processManager = {
         getAppProcess: vi.fn(async () => (processExists ? { pm2_env: { status: "online" } } : undefined)),
+        listFleetProcesses: vi.fn(async () => runningFleet),
         startAppProcess: vi.fn(async () => ({})),
         stopAppProcess: vi.fn(async () => ({})),
         deleteAppProcess: vi.fn(async () => ({})),
-        startOrRestartAppProcess: vi.fn(async () => ({})),
+        recreateAppProcess: vi.fn(async () => ({})),
     }
 
     const artifactStore = {
@@ -62,6 +66,57 @@ const makeFakes = (initialConfigs: AppConfig[] = [], { processExists = true } = 
 
 const baseConfig: AppConfig = { id: "id-1", name: "my-app", entry: "index.js", env: { A: "1" } }
 
+describe("appService.reconcileFleet", () => {
+    it("recreates every configured app, with the app dir as cwd", async () => {
+        const { service, processManager } = makeFakes([
+            baseConfig,
+            { id: "id-2", name: "other", entry: "s.js", env: {} },
+        ])
+
+        await service.reconcileFleet()
+
+        expect(processManager.recreateAppProcess).toHaveBeenCalledTimes(2)
+        expect(processManager.recreateAppProcess).toHaveBeenCalledWith({
+            name: "my-app",
+            entry: "index.js",
+            env: { A: "1" },
+            cwd: "/apps/id-1",
+        })
+    })
+
+    it("reclaims labelled processes that have no config", async () => {
+        const { service, processManager } = makeFakes([baseConfig], {
+            runningFleet: [{ name: "my-app" }, { name: "stale-app" }],
+        })
+
+        await service.reconcileFleet()
+
+        expect(processManager.stopAppProcess).toHaveBeenCalledWith("stale-app")
+        expect(processManager.deleteAppProcess).toHaveBeenCalledWith("stale-app")
+        expect(processManager.deleteAppProcess).not.toHaveBeenCalledWith("my-app")
+    })
+
+    it("leaves foreign processes alone — only labelled ones are listed", async () => {
+        const { service, processManager } = makeFakes([baseConfig], { runningFleet: [{ name: "my-app" }] })
+
+        await service.reconcileFleet()
+
+        expect(processManager.stopAppProcess).not.toHaveBeenCalled()
+    })
+})
+
+describe("appService.stopFleet", () => {
+    it("removes only the configured apps", async () => {
+        const { service, processManager } = makeFakes([baseConfig, { id: "id-2", name: "other", env: {} }])
+
+        await service.stopFleet()
+
+        expect(processManager.deleteAppProcess).toHaveBeenCalledWith("my-app")
+        expect(processManager.deleteAppProcess).toHaveBeenCalledWith("other")
+        expect(processManager.deleteAppProcess).toHaveBeenCalledTimes(2)
+    })
+})
+
 describe("appService.updateAppConfig", () => {
     it("does not touch the process when nothing relevant changed", async () => {
         const { service, processManager } = makeFakes([baseConfig])
@@ -69,19 +124,16 @@ describe("appService.updateAppConfig", () => {
         const result = await service.updateAppConfig("id-1", { name: "my-app" })
 
         expect(result).toMatchObject({ ok: true })
+        expect(processManager.recreateAppProcess).not.toHaveBeenCalled()
         expect(processManager.stopAppProcess).not.toHaveBeenCalled()
-        expect(processManager.deleteAppProcess).not.toHaveBeenCalled()
-        expect(processManager.startAppProcess).not.toHaveBeenCalled()
     })
 
-    it("stops and starts on an entry change, with the app dir as cwd", async () => {
+    it("recreates on an entry change rather than restarting", async () => {
         const { service, processManager } = makeFakes([baseConfig])
 
         await service.updateAppConfig("id-1", { entry: "other.js" })
 
-        expect(processManager.stopAppProcess).toHaveBeenCalledWith("my-app")
-        expect(processManager.deleteAppProcess).not.toHaveBeenCalled()
-        expect(processManager.startAppProcess).toHaveBeenCalledWith({
+        expect(processManager.recreateAppProcess).toHaveBeenCalledWith({
             name: "my-app",
             entry: "other.js",
             env: { A: "1" },
@@ -89,24 +141,22 @@ describe("appService.updateAppConfig", () => {
         })
     })
 
-    it("stops AND deletes the OLD process name on a rename, so no stray entry survives", async () => {
+    it("removes the OLD process name on a rename, so nothing stray survives", async () => {
         const { service, processManager } = makeFakes([baseConfig])
 
         await service.updateAppConfig("id-1", { name: "renamed" })
 
         expect(processManager.stopAppProcess).toHaveBeenCalledWith("my-app")
         expect(processManager.deleteAppProcess).toHaveBeenCalledWith("my-app")
-        expect(processManager.startAppProcess).toHaveBeenCalledWith(expect.objectContaining({ name: "renamed" }))
+        expect(processManager.recreateAppProcess).toHaveBeenCalledWith(expect.objectContaining({ name: "renamed" }))
     })
 
-    it("stops AND deletes the process on an env change", async () => {
+    it("recreates on an env change", async () => {
         const { service, processManager } = makeFakes([baseConfig])
 
         await service.updateAppConfig("id-1", { env: { A: "2" } })
 
-        expect(processManager.stopAppProcess).toHaveBeenCalledWith("my-app")
-        expect(processManager.deleteAppProcess).toHaveBeenCalledWith("my-app")
-        expect(processManager.startAppProcess).toHaveBeenCalledWith(expect.objectContaining({ env: { A: "2" } }))
+        expect(processManager.recreateAppProcess).toHaveBeenCalledWith(expect.objectContaining({ env: { A: "2" } }))
     })
 
     it("saves the config but starts nothing when no process exists", async () => {
@@ -116,7 +166,7 @@ describe("appService.updateAppConfig", () => {
 
         expect(result).toMatchObject({ ok: true })
         expect(configs.get("id-1")?.entry).toBe("other.js")
-        expect(processManager.startAppProcess).not.toHaveBeenCalled()
+        expect(processManager.recreateAppProcess).not.toHaveBeenCalled()
     })
 
     it("rejects a rename to a name another app already uses", async () => {
@@ -139,9 +189,10 @@ describe("appService.createApp", () => {
     it("creates an app", async () => {
         const { service } = makeFakes([])
 
-        const result = await service.createApp("id-9", "fresh")
-
-        expect(result).toMatchObject({ ok: true, config: { id: "id-9", name: "fresh" } })
+        expect(await service.createApp("id-9", "fresh")).toMatchObject({
+            ok: true,
+            config: { id: "id-9", name: "fresh" },
+        })
     })
 
     it("rejects a duplicate name", async () => {
@@ -156,9 +207,7 @@ describe("appService.listApps", () => {
         const { service, artifactStore } = makeFakes([baseConfig, { id: "id-2", name: "empty-app", env: {} }])
         artifactStore.hasArtifact.mockImplementation((async (appId: string) => appId === "id-1") as never)
 
-        const apps = await service.listApps()
-
-        expect(apps).toEqual([
+        expect(await service.listApps()).toEqual([
             { config: expect.objectContaining({ id: "id-1" }), state: "online" },
             { config: expect.objectContaining({ id: "id-2" }), state: "no-artifact" },
         ])
@@ -169,9 +218,7 @@ describe("appService.deleteApp", () => {
     it("removes the process, the config and the app directory", async () => {
         const { service, processManager, artifactStore, configs } = makeFakes([baseConfig])
 
-        const result = await service.deleteApp("id-1")
-
-        expect(result).toEqual({ ok: true })
+        expect(await service.deleteApp("id-1")).toEqual({ ok: true })
         expect(processManager.stopAppProcess).toHaveBeenCalledWith("my-app")
         expect(processManager.deleteAppProcess).toHaveBeenCalledWith("my-app")
         expect(configs.has("id-1")).toBe(false)

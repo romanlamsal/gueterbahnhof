@@ -1,5 +1,6 @@
 import { decideRestart } from "@/domain/app-config-change.ts"
 import { deriveAppState } from "@/domain/app-state.ts"
+import { findOrphanProcessNames } from "@/domain/fleet.ts"
 import type { AppConfig, AppConfigRepository } from "@/interface-services/app-config-repository.ts"
 import type { ArtifactStore } from "@/interface-services/artifact-store.ts"
 import { type ProcessManager, toProcessSpec } from "@/interface-services/pm2-process-manager.ts"
@@ -29,20 +30,40 @@ export const createAppService = ({
     }
 
     return {
-        async startAllApps() {
+        // Boot: recreate every configured app and reclaim labelled processes that
+        // no longer have a config (ADR-0003). Recreate rather than restart, since
+        // pm2 keeps the env a process was started with.
+        async reconcileFleet() {
             const configs = await configRepository.listAppConfigs()
 
-            const procs = await Promise.all(configs.map(config => processManager.startAppProcess(specFor(config))))
+            const started = await Promise.all(configs.map(config => processManager.recreateAppProcess(specFor(config))))
 
-            console.log(`Started ${procs.filter(Boolean).length} of ${configs.length} apps.`)
+            const runningFleet = await processManager.listFleetProcesses()
+            const orphans = findOrphanProcessNames(
+                configs.map(config => config.name),
+                runningFleet.map(proc => proc.name).filter((name): name is string => !!name),
+            )
+
+            for (const orphanName of orphans) {
+                console.log(`Reclaiming '${orphanName}': labelled as ours but no config exists.`)
+                await processManager.stopAppProcess(orphanName)
+                await processManager.deleteAppProcess(orphanName)
+            }
+
+            console.log(
+                `Started ${started.filter(Boolean).length} of ${configs.length} apps` +
+                    (orphans.length ? `, reclaimed ${orphans.length} orphan(s).` : "."),
+            )
         },
 
-        async wipeAllApps() {
+        // Shutdown: take down our own apps and nothing else. The daemon and any
+        // process we did not configure survive (ADR-0003).
+        async stopFleet() {
             const configs = await configRepository.listAppConfigs()
 
-            const procs = await Promise.all(configs.map(config => processManager.deleteAppProcess(config.name)))
+            const stopped = await Promise.all(configs.map(config => processManager.deleteAppProcess(config.name)))
 
-            console.log(`Removed ${procs.filter(Boolean).length} of ${configs.length} apps from the process manager.`)
+            console.log(`Stopped ${stopped.filter(Boolean).length} of ${configs.length} apps.`)
         },
 
         async listApps() {
@@ -86,7 +107,7 @@ export const createAppService = ({
                 return
             }
 
-            return processManager.startOrRestartAppProcess(specFor(config))
+            return processManager.recreateAppProcess(specFor(config))
         },
 
         async updateAppConfig(appId: string, partial: Partial<AppConfig>): Promise<AppMutationResult> {
@@ -112,23 +133,17 @@ export const createAppService = ({
                 return { ok: true, config: currConfig }
             }
 
-            const decision = decideRestart(prevConfig, currConfig)
-
-            if (decision === "restart") {
-                await processManager.stopAppProcess(prevConfig.name)
-
-                // A rename leaves the old-named pm2 entry behind forever —
-                // delete it, nothing stray (ADR-0002 spirit).
+            // decideRestart still distinguishes restart from recreate to record
+            // *why* a change matters, but both are applied by recreating: the
+            // env-staleness argument holds for every restart.
+            if (decideRestart(prevConfig, currConfig) !== "none") {
                 if (prevConfig.name !== currConfig.name) {
+                    // Nothing stray: the old name would otherwise linger.
+                    await processManager.stopAppProcess(prevConfig.name)
                     await processManager.deleteAppProcess(prevConfig.name)
                 }
-            } else if (decision === "recreate") {
-                await processManager.stopAppProcess(prevConfig.name)
-                await processManager.deleteAppProcess(prevConfig.name)
-            }
 
-            if (decision !== "none") {
-                await processManager.startAppProcess(specFor(currConfig))
+                await processManager.recreateAppProcess(specFor(currConfig))
             }
 
             return { ok: true, config: currConfig }
