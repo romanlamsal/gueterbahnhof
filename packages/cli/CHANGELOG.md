@@ -1,5 +1,19 @@
 # @lamsal-de/gueterbahnhof
 
+## 1.3.0
+
+### Minor Changes
+
+-   **Saving an app config now tells you what happened.** A spinner inside the disabled Save button while it is in flight, then either a green checkmark that fades after a few seconds or a red message that stays until your next edit — both in the same place beside the button.
+
+-   **Fixed: edits in the dotenv tab were silently discarded.** The textarea was rendered without its change handler, so anything typed or pasted there never reached the form's state and was never saved. If it looked like changing environment variables did not restart your app, this was why — the change never arrived. One Save covers name, entry and environment together, and the textarea is parsed both when you leave it and again on submit, so saving mid-typing loses nothing.
+
+-   **Fixed: the save confirmation had never appeared.** The button only showed its checkmark when an `onClick` handler returned a promise, and the form submits directly, so that code had never run.
+
+-   **A copy button beside the dotenv textarea** writes the environment out URI-escaped, whatever the Escaped toggle is set to, so values containing quotes, newlines or `#` survive being pasted elsewhere. The toggle now only affects what you see.
+
+-   **Chrome:** the burger menu wrapping a single link is gone, replaced by a slim header; the browser tab reads "gueterbahnhof 🚂" and has a matching favicon.
+
 ## 1.2.0
 
 ### Minor Changes

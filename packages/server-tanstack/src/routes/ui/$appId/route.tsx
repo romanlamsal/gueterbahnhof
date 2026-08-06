@@ -1,15 +1,9 @@
-import { type Updater, type UseMutationOptions, useMutation, useSuspenseQuery } from "@tanstack/react-query"
+import { type UseMutationOptions, useMutation, useSuspenseQuery } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { X } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect } from "react"
 import type { AppMutationResult } from "@/app-services/app-service.ts"
-import { SaveButton } from "@/components/SaveButton.tsx"
-import { Button } from "@/components/ui/button.tsx"
-import { Input } from "@/components/ui/input.tsx"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.tsx"
-import { Textarea } from "@/components/ui/textarea.tsx"
+import { AppConfigForm, type AppConfigPatch, type SaveOutcome } from "@/components/AppConfigForm.tsx"
 import type { AppConfig } from "@/interface-services/app-config-repository.ts"
-import { formatEnvs, parseEnvs } from "@/lib/dotenv-roundtrip.ts"
 import { deleteAppFunc, loadAppsFunc, updateAppFunc } from "@/routes/ui/-lib/server-funcs.ts"
 
 export const Route = createFileRoute("/ui/$appId")({
@@ -40,32 +34,6 @@ const updateMutationOpts = (appId: string) =>
         },
     }) satisfies UseMutationOptions<AppMutationResult, Error, Partial<AppConfig>>
 
-const DotenvTextarea = ({
-    envs,
-    onChangeEnvs,
-    escaped = false,
-}: {
-    envs: [string, string][]
-    onChangeEnvs?: (updater: Updater<typeof envs, typeof envs>) => void
-    escaped?: boolean
-}) => {
-    const dotenvFormat = useMemo(() => formatEnvs(envs, escaped), [envs, escaped])
-
-    return (
-        <Textarea
-            key={escaped.toString()}
-            defaultValue={dotenvFormat}
-            onChange={ev => {
-                try {
-                    onChangeEnvs?.(parseEnvs(ev.currentTarget.value, escaped))
-                } catch {
-                    console.log("Could not parse dotenv from string.")
-                }
-            }}
-        />
-    )
-}
-
 function RouteComponent() {
     const { appId } = Route.useParams()
 
@@ -75,7 +43,6 @@ function RouteComponent() {
         select: data => data.find(d => d.config.id === appId),
     })
 
-    const [saveError, setSaveError] = useState<string | undefined>()
     const { mutateAsync: updateAppConfig } = useMutation(updateMutationOpts(appId))
 
     const navigate = useNavigate()
@@ -87,15 +54,6 @@ function RouteComponent() {
         },
     })
 
-    const [envs, setEnvs] = useState<[string, string][]>(app ? Object.entries(app.config.env) : [])
-    useEffect(() => {
-        if (app?.config.env) {
-            setEnvs(Object.entries(app.config.env))
-        }
-    }, [app?.config.env])
-
-    const [escaped, setEscaped] = useState(false)
-
     useEffect(() => {
         if (!app) {
             navigate({ to: "/ui" })
@@ -106,103 +64,11 @@ function RouteComponent() {
         return null
     }
 
-    return (
-        <form
-            onSubmit={async ev => {
-                ev.preventDefault()
+    const save = async (patch: AppConfigPatch): Promise<SaveOutcome> => {
+        const result = await updateAppConfig(patch)
 
-                const formData = new FormData(
-                    ev.currentTarget,
-                    (ev.nativeEvent as unknown as { submitter: HTMLElement }).submitter,
-                )
+        return result.ok ? { ok: true } : { ok: false, message: mutationErrorMessages[result.code] ?? "Saving failed." }
+    }
 
-                const result = await updateAppConfig({
-                    env: Object.fromEntries(envs),
-                    name: formData.get("name") as string,
-                    entry: formData.get("entry") as string,
-                })
-
-                setSaveError(result.ok ? undefined : (mutationErrorMessages[result.code] ?? "Saving failed."))
-            }}
-            className={"space-y-8 p-4"}
-            key={appId}
-        >
-            <Button
-                type={"button"}
-                variant={"destructive"}
-                onClick={() => {
-                    if (window.confirm(`Delete app '${app.config.name}'? This removes its process and files.`)) {
-                        deleteApp()
-                    }
-                }}
-            >
-                Delete
-            </Button>
-            <label className={"block"}>
-                Name <Input name={"name"} defaultValue={app.config.name} />
-            </label>
-            {saveError ? <div className={"text-red-500"}>{saveError}</div> : null}
-
-            <label className={"block"}>
-                Entry <Input name={"entry"} defaultValue={app.config.entry} />
-            </label>
-
-            <Tabs defaultValue={"list"}>
-                <TabsList>
-                    <TabsTrigger value={"list"}>List</TabsTrigger>
-                    <TabsTrigger value={"dotenv"}>dotenv</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value={"list"}>
-                    <ul>
-                        {[...envs, ["", ""]].map(([key, value], i) => (
-                            <li key={i} className={"grid grid-cols-[repeat(2,1fr)_auto]"}>
-                                <Input
-                                    value={key}
-                                    onChange={ev => {
-                                        setEnvs(prevState => [
-                                            ...prevState.slice(0, i),
-                                            [ev.target.value as string, prevState[i]?.[1] ?? ""] as const,
-                                            ...prevState.slice(i + 1),
-                                        ])
-                                    }}
-                                />
-                                <Input
-                                    value={value}
-                                    onChange={ev => {
-                                        setEnvs(prevState => [
-                                            ...prevState.slice(0, i),
-                                            [prevState[i]?.[0] ?? "", ev.target.value as string] as const,
-                                            ...prevState.slice(i + 1),
-                                        ])
-                                    }}
-                                />
-                                <X
-                                    className={"cursor-pointer text-red-500"}
-                                    onClick={() =>
-                                        setEnvs(prevState => [...prevState.slice(0, i), ...prevState.slice(i + 1)])
-                                    }
-                                />
-                            </li>
-                        ))}
-                    </ul>
-                </TabsContent>
-                <TabsContent value={"dotenv"}>
-                    <label className={"inline-flex items-center gap-2"}>
-                        Escaped
-                        <Input
-                            type={"checkbox"}
-                            checked={escaped}
-                            onChange={ev => setEscaped(ev.target.checked)}
-                            className={"inline size-4"}
-                        />
-                    </label>
-                    <DotenvTextarea envs={envs} escaped={escaped} />
-                </TabsContent>
-            </Tabs>
-            <SaveButton size={"lg"} iconPosition={"left"}>
-                Save
-            </SaveButton>
-        </form>
-    )
+    return <AppConfigForm key={appId} config={app.config} onSave={save} onDelete={deleteApp} />
 }
