@@ -11,11 +11,13 @@ const config = { id: "id-1", name: "my-app", entry: "index.js", env: { EXISTING:
 const renderForm = ({
     onSave = vi.fn(async (): Promise<SaveOutcome> => ({ ok: true })),
     defaultTab = "dotenv",
+    config: override = config,
 }: {
     onSave?: (patch: AppConfigPatch) => Promise<SaveOutcome>
     defaultTab?: "list" | "dotenv"
+    config?: typeof config & { port?: number }
 } = {}) => {
-    render(<AppConfigForm config={config} onSave={onSave} onDelete={vi.fn()} defaultTab={defaultTab} />)
+    render(<AppConfigForm config={override} onSave={onSave} onDelete={vi.fn()} defaultTab={defaultTab} />)
     return { onSave }
 }
 
@@ -126,5 +128,119 @@ describe("AppConfigForm", () => {
 
         await waitFor(() => expect(writeText).toHaveBeenCalledWith("GNARLY=a%20b%23c"))
         expect(await screen.findByLabelText("Copied")).toBeDefined()
+    })
+
+    describe("the Proxy Host field", () => {
+        it("saves what was typed", async () => {
+            const { onSave } = renderForm()
+
+            fireEvent.change(screen.getByLabelText<HTMLInputElement>("Proxy Host"), {
+                target: { value: "api.example.com" },
+            })
+            save()
+
+            await waitFor(() =>
+                expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ proxyHost: "api.example.com" })),
+            )
+        })
+
+        it("saves nothing when empty, which is what leaves the App unproxied", async () => {
+            const { onSave } = renderForm()
+
+            save()
+
+            await waitFor(() => expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ proxyHost: undefined })))
+        })
+
+        it("says what leaving it empty means", () => {
+            renderForm()
+
+            expect(screen.getByText(/leave empty for no host-based proxying/i)).toBeDefined()
+        })
+    })
+
+    // The Port has a field of its own, so the Env editor must not offer a
+    // second place to change it — and an App configured before that field
+    // existed has to keep running on exactly the port it runs on now.
+    describe("the Port field", () => {
+        const withEnvPort = { ...config, env: { EXISTING: "yes", PORT: "3001" } }
+
+        it("saves a typed port as a number", async () => {
+            const { onSave } = renderForm()
+
+            fireEvent.change(screen.getByLabelText<HTMLInputElement>("Port"), { target: { value: "20001" } })
+            save()
+
+            await waitFor(() => expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ port: 20001 })))
+        })
+
+        it("saves no port when the field is empty, which is what makes it assignable", async () => {
+            const { onSave } = renderForm()
+
+            save()
+
+            await waitFor(() => expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ port: undefined })))
+        })
+
+        it("prefills from the Env when the App has no port of its own, and says it was inherited", () => {
+            renderForm({ config: withEnvPort })
+
+            expect(screen.getByLabelText<HTMLInputElement>("Port").value).toBe("3001")
+            expect(screen.getByText(/inherited from the PORT environment variable/i)).toBeDefined()
+        })
+
+        it("shows a declared port without calling it inherited", () => {
+            renderForm({ config: { ...withEnvPort, port: 20001 } })
+
+            expect(screen.getByLabelText<HTMLInputElement>("Port").value).toBe("20001")
+            expect(screen.queryByText(/inherited/i)).toBeNull()
+        })
+
+        it("says what leaving it empty means", () => {
+            renderForm()
+
+            expect(screen.getByText(/assigned automatically, if a proxy host is set/i)).toBeDefined()
+        })
+
+        it("keeps PORT out of the dotenv view", () => {
+            renderForm({ config: withEnvPort })
+
+            expect(screen.getByLabelText<HTMLTextAreaElement>("Env as dotenv").value).toBe("EXISTING=yes")
+        })
+
+        it("keeps PORT out of the list view", () => {
+            renderForm({ config: withEnvPort, defaultTab: "list" })
+
+            const names = screen
+                .getAllByLabelText<HTMLInputElement>(/^Env name /)
+                .map(input => input.value)
+                .filter(Boolean)
+
+            expect(names).toEqual(["EXISTING"])
+        })
+
+        it("promotes an inherited port on save, submitting an Env without PORT", async () => {
+            const { onSave } = renderForm({ config: withEnvPort })
+
+            save()
+
+            // Same effective port either way — the value simply moves house.
+            await waitFor(() =>
+                expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ port: 3001, env: { EXISTING: "yes" } })),
+            )
+        })
+
+        it("refuses to submit PORT typed into the dotenv textarea", async () => {
+            const { onSave } = renderForm()
+
+            fireEvent.change(screen.getByLabelText("Env as dotenv"), {
+                target: { value: "EXISTING=yes\nPORT=9999" },
+            })
+            save()
+
+            await waitFor(() =>
+                expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ env: { EXISTING: "yes" } })),
+            )
+        })
     })
 })

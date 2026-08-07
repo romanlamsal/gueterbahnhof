@@ -1,3 +1,5 @@
+import { resolveAppPort } from "@/domain/app-port.ts"
+
 // The Process Manager port, written by hand so that pm2's vocabulary stops at
 // its adapter. Callers speak App names and statuses; nothing here mentions
 // ProcessDescription, pm2_env or Proc.
@@ -29,12 +31,20 @@ export type ProcessManager = {
 }
 
 // Shared config -> process-spec mapping: the App runs inside its App Directory.
+//
+// The resolved Port is injected here as PORT, because that is the only way an
+// App can learn which port to bind. The App Config field is the source of
+// truth; Gueterbahnhof never writes the value back into the App's own Env.
 export const toProcessSpec = (
-    config: { name: string; entry?: string; env?: Record<string, string> },
+    config: { name: string; entry?: string; env?: Record<string, string>; port?: number },
     appDir: string,
-): AppProcessSpec => ({
-    name: config.name,
-    entry: config.entry,
-    env: config.env,
-    cwd: appDir,
-})
+): AppProcessSpec => {
+    const port = resolveAppPort(config)
+
+    return {
+        name: config.name,
+        entry: config.entry,
+        env: port === undefined ? config.env : { ...config.env, PORT: String(port) },
+        cwd: appDir,
+    }
+}

@@ -1,5 +1,23 @@
 # @lamsal-de/gueterbahnhof
 
+## 1.4.0
+
+### Minor Changes
+
+-   **Gueterbahnhof can now reverse-proxy to the apps it runs.** An app config gains two declared fields, both edited in the app's form: a **Proxy Host** — the public hostname it answers on — and a **Port**. Requests are matched on `X-Forwarded-Host`, then `Host`, and proxied to the app; websockets, streaming and server-sent events included. A host nobody declared falls through to the management API exactly as before, so the UI and the deploy endpoint are untouched.
+
+-   **Leave the Port empty and one is chosen for you.** For an app that has a Proxy Host and no port, gueterbahnhof picks one from 20000–20999 — skipping everything already claimed and checking it is actually free — then remembers it, so it survives restarts. The range sits below the kernel's ephemeral port range on purpose: a port from IANA's "dynamic" range can be taken by an outbound connection between the check and the bind.
+
+-   **Nothing existing moves.** An app with no Proxy Host is never routed to and never has a port chosen for it, which is every app that exists today — so upgrading without editing anything changes nothing at all. An app carrying `PORT` in its env keeps running on exactly that port whether or not its form is ever opened. `PORT` is now hidden from the env editor, because the Port field is where it belongs; the field prefills from the env value and says so, and saving simply promotes it without the app's port changing.
+
+-   **A stopped app answers with a 502 that names it**, rather than showing a visitor the gueterbahnhof login page.
+
+-   **Changing an app's Proxy Host no longer restarts it.** Changing its Port still does, since it has to rebind.
+
+-   **Requires Node 22.15 or newer**, now declared in `engines` so an unsupported runtime fails at install rather than at runtime.
+
+-   **Internal: the server package starts itself.** Everything between "the arguments are known" and "the process is serving" — applying the environment, booting the fleet, installing shutdown handlers, assembling HTTP and listening — moved out of the CLI into a single entry, the Stationmaster; the `server` command is argv parsing and nothing else. No behaviour changed: same flags, same environment variables, same startup message, same exit codes, same shutdown. The startup path has tests for the first time.
+
 ## 1.3.1
 
 ### Patch Changes

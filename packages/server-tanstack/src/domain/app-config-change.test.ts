@@ -27,4 +27,16 @@ describe("needsRecreate", () => {
     it("is true on a removed env var", () => {
         expect(needsRecreate(base, { ...base, env: {} })).toBe(true)
     })
+
+    // The Port lives outside the Env now, so without comparing it an App would
+    // go on binding the old port after the field changed.
+    it("is true when the port is set, changed or cleared", () => {
+        expect(needsRecreate(base, { ...base, port: 20001 })).toBe(true)
+        expect(needsRecreate({ ...base, port: 20001 }, { ...base, port: 20002 })).toBe(true)
+        expect(needsRecreate({ ...base, port: 20001 }, base)).toBe(true)
+    })
+
+    it("is false when only the port stays the same", () => {
+        expect(needsRecreate({ ...base, port: 20001 }, { ...base, port: 20001 })).toBe(false)
+    })
 })

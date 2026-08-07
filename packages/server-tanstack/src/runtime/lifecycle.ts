@@ -8,7 +8,9 @@ import { createServices } from "./create-services.ts"
 // bundle as well as the server, and that duplication is safe precisely because
 // the daemon, not a module instance, holds the fleet's state.
 
-export const bootFleet = async (gueterbahnhofDir: string) => {
+// reservedPorts carries the port the server itself listens on, so port
+// assignment can never hand an App the socket Gueterbahnhof is sitting on.
+export const bootFleet = async (gueterbahnhofDir: string, reservedPorts: readonly number[] = []) => {
     const { appsDir, appService } = createServices(gueterbahnhofDir)
 
     // Create the app directory or fail loudly — never prompt (headless hosts).
@@ -17,7 +19,7 @@ export const bootFleet = async (gueterbahnhofDir: string) => {
     migrateLegacyAppsJson(gueterbahnhofDir, appsDir)
 
     await connectProcessManager()
-    await appService.reconcileFleet()
+    await appService.reconcileFleet({ reservedPorts })
 }
 
 export const shutdownFleet = async (gueterbahnhofDir: string) => {

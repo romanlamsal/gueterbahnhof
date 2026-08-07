@@ -12,5 +12,9 @@ const envChanged = (prev: AppConfig["env"], next: AppConfig["env"]) => {
     return prevKeys.length !== nextKeys.length || prevKeys.some(key => prev[key] !== next[key])
 }
 
+// Port is compared because it lives outside the Env now: without this an App
+// would keep binding the old port after the field changed. Anything routing
+// related must NOT be compared — the App does not need telling where requests
+// come from, and re-pointing a hostname must not drop live connections.
 export const needsRecreate = (prev: AppConfig, next: AppConfig) =>
-    envChanged(prev.env, next.env) || prev.name !== next.name || prev.entry !== next.entry
+    envChanged(prev.env, next.env) || prev.name !== next.name || prev.entry !== next.entry || prev.port !== next.port

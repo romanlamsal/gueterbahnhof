@@ -1,7 +1,11 @@
 import type { Server } from "node:http"
 import { join } from "node:path"
 import express, { type RequestHandler } from "express"
+import type { ProxyRouteSource } from "@/domain/proxy-route.ts"
+import { createServices } from "@/runtime/create-services.ts"
 import { bootFleet, shutdownFleet } from "@/runtime/lifecycle.ts"
+import { createAppProxy } from "./app-proxy.ts"
+import { createRouteTable } from "./route-table.ts"
 
 // The Stationmaster: what owns the running server process (ADR-0006). Given
 // settings that are already parsed, it applies the environment the built
@@ -33,9 +37,11 @@ export type StartServerOptions = {
     // Collaborators default to the real thing and are substituted in tests —
     // the idiom applyJournaldPriorityPrefixes({ env, target }) already uses.
     // Real behaviour by default, no test-only code path.
-    boot?: (appDir: string) => Promise<void>
+    boot?: (appDir: string, reservedPorts: readonly number[]) => Promise<void>
     shutdown?: (appDir: string) => Promise<void>
     loadMiddleware?: (serverOutputDir: string) => Promise<RequestHandler>
+    listAppConfigs?: (appDir: string) => Promise<ProxyRouteSource[]>
+    routeTtlMs?: number
     env?: Record<string, string | undefined>
     hostProcess?: HostProcess
 }
@@ -81,6 +87,8 @@ export const startGueterbahnhofServer = async ({
     boot = bootFleet,
     shutdown = shutdownFleet,
     loadMiddleware = loadBuiltMiddleware,
+    listAppConfigs = appDirectory => createServices(appDirectory).configRepository.listAppConfigs(),
+    routeTtlMs,
     env = process.env,
     hostProcess = process,
 }: StartServerOptions): Promise<Server> => {
@@ -97,7 +105,8 @@ export const startGueterbahnhofServer = async ({
     // and fatal — a listening server with no apps is worse. The exit code
     // belongs to whoever owns the process, so this reports and rethrows.
     try {
-        await boot(appDir)
+        // Our own port is reserved so no App is ever assigned it.
+        await boot(appDir, [port])
     } catch (error) {
         console.error("Boot failed:", error)
         throw error
@@ -107,10 +116,18 @@ export const startGueterbahnhofServer = async ({
 
     const middleware = await loadMiddleware(serverOutputDir)
 
+    const routeTable = createRouteTable({ listAppConfigs: () => listAppConfigs(appDir), ttlMs: routeTtlMs })
+    // Primed before we listen, so the first request is routable rather than
+    // falling through while the table warms up.
+    await routeTable.prime()
+    const appProxy = createAppProxy(routeTable)
+
     const app = express()
-    // Static assets first, then the nitro app. Load-bearing: the reverse proxy
-    // inserts itself ahead of both, so that a proxied app's own favicon.ico
-    // and robots.txt are not answered from our public directory.
+    // The proxy goes first, ahead of the static handler: a proxied App's own
+    // favicon.ico and robots.txt must be answered by that App and not from our
+    // public directory. A request for a host nobody declared falls straight
+    // through to static and then the nitro app, exactly as before.
+    app.use(appProxy.middleware)
     app.use(express.static(join(serverOutputDir, "public")))
     app.use(middleware)
 
@@ -119,5 +136,9 @@ export const startGueterbahnhofServer = async ({
             console.log(`Started gueterbahnhof on http://localhost:${port}.`)
             resolve(server)
         })
+
+        // Upgrades bypass express entirely, so the proxy has to be subscribed
+        // to the server itself or a websocket-first client is never proxied.
+        server.on("upgrade", appProxy.upgrade)
     })
 }

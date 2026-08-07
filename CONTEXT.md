@@ -68,6 +68,18 @@ _Avoid_: Deployer, agent
 The single published binary (`@lamsal-de/gueterbahnhof`) bundling both roles: `server` starts a Gueterbahnhof server, `deploy` acts as a client.
 _Avoid_: Tool, binary
 
+**Proxy Host**:
+The public hostname an App answers on, declared as a field of its App Config. Setting one is what makes an App reachable through Gueterbahnhof; an App without one is never routed to. Gueterbahnhof's knowledge, not the App's — it is never injected into the App's Env.
+_Avoid_: Virtual host, domain, route, GUETERBAHNHOF_HOST (that name belongs to the deploy client, for the server's own URL)
+
+**Port**:
+The port an App binds, declared as a field of its App Config and injected into its process as `PORT`. An App configured before the field existed says it with a `PORT` in its Env instead, and that still resolves — the field simply wins.
+_Avoid_: Listen port, app port
+
+**Assigned Port**:
+A Port that Gueterbahnhof chose, because the App declared a Proxy Host and named no port itself. Persisted on the App Config like any other Port, so it is stable across restarts rather than picked afresh. The only value Gueterbahnhof ever writes that the operator did not type.
+_Avoid_: Random port, dynamic port, ephemeral port (that means the kernel's own range, which this deliberately avoids)
+
 **Stationmaster**:
 What owns the running server process: it boots the Fleet, wires up HTTP, installs the shutdown handlers and listens. Lives in the server package and is handed its settings already parsed — the CLI decides what they are, the Stationmaster decides what to do with them.
 _Avoid_: Host, host entry, runtime, entry (Entry means an App's start path)

@@ -2,11 +2,18 @@ import { readdir, readFile, rm, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { parse } from "dotenv"
 import { z } from "zod"
+import { MAX_PORT, MIN_PORT } from "@/domain/app-port.ts"
 
 export const AppConfigSchema = z.object({
     id: z.string(),
     name: z.string(),
     entry: z.string().optional(),
+    // Optional so every App Config already on disk parses unchanged: an App
+    // with only a PORT in its Env resolves to that, and nothing migrates.
+    port: z.number().int().min(MIN_PORT).max(MAX_PORT).optional(),
+    // The public hostname this App answers on. Declaring one is the entire
+    // opt-in to being proxied; no config on disk has one.
+    proxyHost: z.string().optional(),
     env: z.record(z.string(), z.string()).default({}),
 })
 

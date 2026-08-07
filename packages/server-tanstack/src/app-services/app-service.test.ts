@@ -5,7 +5,7 @@ import { createAppService } from "./app-service.ts"
 
 const makeFakes = (
     initialConfigs: AppConfig[] = [],
-    { processExists = true, runningFleet = [] as ManagedProcess[] } = {},
+    { processExists = true, runningFleet = [] as ManagedProcess[], busyPorts = [] as number[] } = {},
 ) => {
     const configs = new Map(initialConfigs.map(config => [config.id, structuredClone(config)]))
 
@@ -58,9 +58,13 @@ const makeFakes = (
         hasArtifact: vi.fn(async (_appId: string) => true),
     }
 
-    const service = createAppService({ configRepository, processManager, artifactStore })
+    // Substituted through its hand-written port (ADR-0005): no test binds a
+    // real socket to find out whether a port is free.
+    const portProbe = { isPortFree: vi.fn(async (port: number) => !busyPorts.includes(port)) }
 
-    return { service, configRepository, processManager, artifactStore, configs }
+    const service = createAppService({ configRepository, processManager, artifactStore, portProbe })
+
+    return { service, configRepository, processManager, artifactStore, portProbe, configs }
 }
 
 const baseConfig: AppConfig = { id: "id-1", name: "my-app", entry: "index.js", env: { A: "1" } }
@@ -233,5 +237,138 @@ describe("appService.deleteApp", () => {
         const { service } = makeFakes([])
 
         expect(await service.deleteApp("ghost")).toEqual({ ok: false, code: "not-found" })
+    })
+})
+
+// Assignment is the only thing Gueterbahnhof persists that the operator did
+// not type, so most of what matters here is which Apps it must leave alone.
+describe("appService port assignment", () => {
+    const proxied = (over: Partial<AppConfig> = {}): AppConfig => ({
+        id: "id-1",
+        name: "api",
+        entry: "index.js",
+        env: {},
+        proxyHost: "api.example.com",
+        ...over,
+    })
+
+    it("assigns a port to an App that declares a Proxy Host and has none", async () => {
+        const { service, configs } = makeFakes([proxied()])
+
+        await service.reconcileFleet()
+
+        expect(configs.get("id-1")?.port).toBe(20000)
+    })
+
+    it("persists the assignment before the App is started", async () => {
+        const { service, processManager, configs } = makeFakes([proxied()])
+
+        await service.reconcileFleet()
+
+        // The started process carries the assigned port, which can only be
+        // true if the write happened first.
+        expect(configs.get("id-1")?.port).toBe(20000)
+        expect(processManager.recreateAppProcess).toHaveBeenCalledWith(
+            expect.objectContaining({ env: expect.objectContaining({ PORT: "20000" }) }),
+        )
+    })
+
+    it("leaves an App with a declared port alone, and never probes for it", async () => {
+        const { service, configs, portProbe } = makeFakes([proxied({ port: 30001 })])
+
+        await service.reconcileFleet()
+
+        expect(configs.get("id-1")?.port).toBe(30001)
+        expect(portProbe.isPortFree).not.toHaveBeenCalled()
+    })
+
+    it("leaves an App pinned by its Env PORT alone — the nginx case", async () => {
+        const { service, configs, portProbe } = makeFakes([proxied({ env: { PORT: "3001" } })])
+
+        await service.reconcileFleet()
+
+        expect(configs.get("id-1")?.port).toBeUndefined()
+        expect(configs.get("id-1")?.env).toEqual({ PORT: "3001" })
+        expect(portProbe.isPortFree).not.toHaveBeenCalled()
+    })
+
+    it("leaves an App with no Proxy Host completely untouched", async () => {
+        const { service, configs, portProbe } = makeFakes([{ id: "id-1", name: "plain", entry: "i.js", env: {} }])
+
+        await service.reconcileFleet()
+
+        expect(configs.get("id-1")?.port).toBeUndefined()
+        expect(configs.get("id-1")?.env).toEqual({})
+        expect(portProbe.isPortFree).not.toHaveBeenCalled()
+    })
+
+    it("gives two eligible Apps different ports", async () => {
+        const { service, configs } = makeFakes([
+            proxied(),
+            proxied({ id: "id-2", name: "web", proxyHost: "w.example.com" }),
+        ])
+
+        await service.reconcileFleet()
+
+        expect(configs.get("id-1")?.port).toBe(20000)
+        expect(configs.get("id-2")?.port).toBe(20001)
+    })
+
+    it("skips a port another App has already claimed, in a field or an Env", async () => {
+        const { service, configs } = makeFakes([
+            proxied(),
+            { id: "id-2", name: "a", entry: "i.js", env: {}, port: 20000 },
+            { id: "id-3", name: "b", entry: "i.js", env: { PORT: "20001" } },
+        ])
+
+        await service.reconcileFleet()
+
+        expect(configs.get("id-1")?.port).toBe(20002)
+    })
+
+    it("skips a port a foreign process is sitting on", async () => {
+        const { service, configs } = makeFakes([proxied()], { busyPorts: [20000, 20001] })
+
+        await service.reconcileFleet()
+
+        expect(configs.get("id-1")?.port).toBe(20002)
+    })
+
+    it("never hands out the port the server itself listens on", async () => {
+        const { service, configs } = makeFakes([proxied()])
+
+        await service.reconcileFleet({ reservedPorts: [20000] })
+
+        expect(configs.get("id-1")?.port).toBe(20001)
+    })
+
+    it("says so rather than starting the App when the range is exhausted", async () => {
+        const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined)
+        const busyPorts = Array.from({ length: 1000 }, (_, i) => 20000 + i)
+        const { service, configs } = makeFakes([proxied()], { busyPorts })
+
+        await service.reconcileFleet()
+
+        expect(configs.get("id-1")?.port).toBeUndefined()
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining("no free port left"))
+        warn.mockRestore()
+    })
+
+    it("assigns on a config save too, so a Proxy Host set in the UI works without a restart", async () => {
+        const { service, configs } = makeFakes([{ id: "id-1", name: "api", entry: "i.js", env: {} }])
+
+        await service.updateAppConfig("id-1", { proxyHost: "api.example.com" })
+
+        expect(configs.get("id-1")?.port).toBe(20000)
+    })
+
+    it("restarts the App when a save assigns it a port, so it binds the new one", async () => {
+        const { service, processManager } = makeFakes([{ id: "id-1", name: "api", entry: "i.js", env: {} }])
+
+        await service.updateAppConfig("id-1", { proxyHost: "api.example.com" })
+
+        expect(processManager.recreateAppProcess).toHaveBeenCalledWith(
+            expect.objectContaining({ env: expect.objectContaining({ PORT: "20000" }) }),
+        )
     })
 })

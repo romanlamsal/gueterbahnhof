@@ -4,6 +4,7 @@ import { createDeploymentService } from "@/app-services/deployment-service.ts"
 import { createAppConfigRepository } from "@/interface-services/app-config-repository.ts"
 import { createArtifactStore } from "@/interface-services/artifact-store.ts"
 import { pm2ProcessManager } from "@/interface-services/pm2-process-manager.ts"
+import { createPortProbe } from "@/interface-services/port-probe.ts"
 
 // The one place the object graph is wired. Both composition roots call it: the
 // server memoises it (runtime/services.ts), the CLI builds one per boot
@@ -19,13 +20,15 @@ export const createServices = (gueterbahnhofDir: string) => {
     const configRepository = createAppConfigRepository(appsDir)
     const artifactStore = createArtifactStore(appsDir)
     const processManager = pm2ProcessManager
+    const portProbe = createPortProbe()
 
     return {
         appsDir,
         configRepository,
         artifactStore,
         processManager,
-        appService: createAppService({ configRepository, artifactStore, processManager }),
+        portProbe,
+        appService: createAppService({ configRepository, artifactStore, processManager, portProbe }),
         deploymentService: createDeploymentService({ configRepository, artifactStore, processManager }),
     }
 }
