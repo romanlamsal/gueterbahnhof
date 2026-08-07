@@ -1,5 +1,5 @@
 ---
-status: accepted (supersedes ADR-0002)
+status: accepted (supersedes ADR-0002; amended by ADR-0006)
 ---
 
 # An external pm2 daemon owns the fleet, and the CLI owns the lifecycle

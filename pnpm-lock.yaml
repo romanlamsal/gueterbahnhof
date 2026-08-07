@@ -41,9 +41,6 @@ importers:
       '@gueterbahnhof/client':
         specifier: workspace:*
         version: link:../client
-      '@types/express':
-        specifier: ^5.0.6
-        version: 5.0.6
       '@types/node':
         specifier: ^22.10.2
         version: 22.19.1
@@ -53,9 +50,6 @@ importers:
       esbuild:
         specifier: ^0.25.12
         version: 0.25.12
-      express:
-        specifier: ^4.19.2
-        version: 4.22.1
       server-tanstack:
         specifier: workspace:*
         version: link:../server-tanstack
@@ -148,6 +142,9 @@ importers:
       dotenv:
         specifier: ^16.4.5
         version: 16.6.1
+      express:
+        specifier: ^4.19.2
+        version: 4.22.1
       lucide-react:
         specifier: ^0.544.0
         version: 0.544.0(react@19.2.1)
@@ -194,6 +191,9 @@ importers:
       '@types/adm-zip':
         specifier: ^0.5.0
         version: 0.5.7
+      '@types/express':
+        specifier: ^5.0.6
+        version: 5.0.6
       '@types/node':
         specifier: ^22.10.2
         version: 22.19.1

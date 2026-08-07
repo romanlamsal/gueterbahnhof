@@ -67,3 +67,7 @@ _Avoid_: Deployer, agent
 **CLI**:
 The single published binary (`@lamsal-de/gueterbahnhof`) bundling both roles: `server` starts a Gueterbahnhof server, `deploy` acts as a client.
 _Avoid_: Tool, binary
+
+**Stationmaster**:
+What owns the running server process: it boots the Fleet, wires up HTTP, installs the shutdown handlers and listens. Lives in the server package and is handed its settings already parsed — the CLI decides what they are, the Stationmaster decides what to do with them.
+_Avoid_: Host, host entry, runtime, entry (Entry means an App's start path)

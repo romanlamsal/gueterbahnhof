@@ -2,9 +2,11 @@ import { existsSync } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { command } from "cleye"
-import express from "express"
-import { bootFleet, shutdownFleet } from "server-tanstack/src/runtime/lifecycle.ts"
+import { startGueterbahnhofServer } from "server-tanstack/src/stationmaster/start-server.ts"
 
+// Argv and nothing else (ADR-0006): this resolves flags and the one fact only
+// the CLI knows — where its own bundled server output sits — then hands over
+// to the Stationmaster, which owns everything from there to serving.
 const createServerCommand = (version?: string) =>
     command(
         {
@@ -49,14 +51,6 @@ const createServerCommand = (version?: string) =>
                 console.log("Starting server in version", version)
             }
 
-            // The built server reads its config from env. PM2_HOME is deliberately
-            // left untouched: if the operator set it, both our client and the
-            // daemon we spawn inherit it (ADR-0003).
-            process.env.GUETERBAHNHOF_DIR = appDir
-            if (apiKey) {
-                process.env.GUETERBAHNHOF_API_KEY = apiKey
-            }
-
             const serverOutputDir = join(fileURLToPath(new URL(".", import.meta.url)), "server-output")
 
             if (!existsSync(serverOutputDir)) {
@@ -64,43 +58,18 @@ const createServerCommand = (version?: string) =>
                 process.exit(1)
             }
 
-            // Boot the fleet before serving: connect the daemon, migrate a legacy
-            // config, then recreate every configured app. Failing here must be
-            // loud and fatal — a listening server with no apps is worse.
             try {
-                await bootFleet(appDir)
-            } catch (error) {
-                console.error("Boot failed:", error)
+                await startGueterbahnhofServer({
+                    appDir,
+                    port: Number.parseInt(port, 10),
+                    apiKey,
+                    serverOutputDir,
+                })
+            } catch {
+                // The Stationmaster has already said what went wrong; the exit
+                // code is ours to set.
                 process.exit(1)
             }
-
-            // Our apps go down with us, but the daemon and anything we did not
-            // configure stay up (ADR-0003).
-            let shuttingDown = false
-            for (const signal of ["SIGTERM", "SIGINT"] as const) {
-                process.on(signal, () => {
-                    if (shuttingDown) {
-                        return
-                    }
-                    shuttingDown = true
-
-                    console.log(`Received ${signal}, stopping the fleet.`)
-
-                    shutdownFleet(appDir)
-                        .catch(error => console.error("Failed to stop the fleet:", error))
-                        .then(() => process.exit(0))
-                })
-            }
-
-            const { middleware } = await import(join(serverOutputDir, "server/index.mjs"))
-
-            const app = express()
-            app.use(express.static(join(serverOutputDir, "public")))
-            app.use(middleware)
-
-            app.listen(Number.parseInt(port, 10), () => {
-                console.log(`Started gueterbahnhof on http://localhost:${port}.`)
-            })
         },
     )
 
