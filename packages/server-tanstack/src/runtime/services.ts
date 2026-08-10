@@ -25,6 +25,7 @@ export const getAppConfigRepository = () => getServices().configRepository
 export const getArtifactStore = () => getServices().artifactStore
 export const getAppService = () => getServices().appService
 export const getDeploymentService = () => getServices().deploymentService
+export const getFleetEnvService = () => getServices().fleetEnvService
 
 let deployController: ReturnType<typeof createDeployController> | undefined
 let authService: ReturnType<typeof createAuthService> | undefined

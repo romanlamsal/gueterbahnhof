@@ -3,7 +3,7 @@ import { createServerFn } from "@tanstack/react-start"
 import { z } from "zod"
 import { assertUiSession } from "@/controllers/ui-session.ts"
 import { AppConfigSchema } from "@/interface-services/app-config-repository.ts"
-import { getAppService } from "@/runtime/services.ts"
+import { getAppService, getFleetEnvService } from "@/runtime/services.ts"
 
 export const loadAppsFunc = createServerFn({ method: "GET" }).handler(() => {
     assertUiSession()
@@ -32,4 +32,16 @@ export const deleteAppFunc = createServerFn({ method: "POST" })
     .handler(({ data: { appId } }) => {
         assertUiSession()
         return getAppService().deleteApp(appId)
+    })
+
+export const loadFleetEnvFunc = createServerFn({ method: "GET" }).handler(() => {
+    assertUiSession()
+    return getFleetEnvService().getFleetEnv()
+})
+
+export const saveFleetEnvFunc = createServerFn({ method: "POST" })
+    .inputValidator(z.object({ values: z.record(z.string(), z.string()) }))
+    .handler(({ data: { values } }) => {
+        assertUiSession()
+        return getFleetEnvService().saveFleetEnv(values)
     })

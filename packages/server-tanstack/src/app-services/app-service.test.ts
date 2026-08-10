@@ -5,7 +5,12 @@ import { createAppService } from "./app-service.ts"
 
 const makeFakes = (
     initialConfigs: AppConfig[] = [],
-    { processExists = true, runningFleet = [] as ManagedProcess[], busyPorts = [] as number[] } = {},
+    {
+        processExists = true,
+        runningFleet = [] as ManagedProcess[],
+        busyPorts = [] as number[],
+        fleetEnv = {} as Record<string, string>,
+    } = {},
 ) => {
     const configs = new Map(initialConfigs.map(config => [config.id, structuredClone(config)]))
 
@@ -62,9 +67,20 @@ const makeFakes = (
     // real socket to find out whether a port is free.
     const portProbe = { isPortFree: vi.fn(async (port: number) => !busyPorts.includes(port)) }
 
-    const service = createAppService({ configRepository, processManager, artifactStore, portProbe })
+    const fleetEnvRepository = {
+        readFleetEnv: vi.fn(async () => fleetEnv),
+        writeFleetEnv: vi.fn(async () => undefined),
+    }
 
-    return { service, configRepository, processManager, artifactStore, portProbe, configs }
+    const service = createAppService({
+        configRepository,
+        processManager,
+        artifactStore,
+        portProbe,
+        fleetEnvRepository,
+    })
+
+    return { service, configRepository, processManager, artifactStore, portProbe, fleetEnvRepository, configs }
 }
 
 const baseConfig: AppConfig = { id: "id-1", name: "my-app", entry: "index.js", env: { A: "1" } }
@@ -370,5 +386,161 @@ describe("appService port assignment", () => {
         expect(processManager.recreateAppProcess).toHaveBeenCalledWith(
             expect.objectContaining({ env: expect.objectContaining({ PORT: "20000" }) }),
         )
+    })
+})
+
+// The App Config keeps the reference; only the process gets the value. That is
+// what stops a shared credential being copied into every App that uses it.
+describe("appService fleet env references", () => {
+    const referencing: AppConfig = {
+        id: "id-1",
+        name: "api",
+        entry: "index.js",
+        env: { DATABASE_URL: "$fleet.supabase_url?schema=api", PLAIN: "kept" },
+    }
+
+    it("starts an App with its references resolved", async () => {
+        const { service, processManager } = makeFakes([referencing], {
+            fleetEnv: { supabase_url: "postgres://host/db" },
+        })
+
+        await service.reconcileFleet()
+
+        expect(processManager.recreateAppProcess).toHaveBeenCalledWith(
+            expect.objectContaining({
+                env: { DATABASE_URL: "postgres://host/db?schema=api", PLAIN: "kept" },
+            }),
+        )
+    })
+
+    it("leaves the reference in the App Config on disk", async () => {
+        const { service, configs } = makeFakes([referencing], { fleetEnv: { supabase_url: "postgres://host/db" } })
+
+        await service.reconcileFleet()
+
+        expect(configs.get("id-1")?.env.DATABASE_URL).toBe("$fleet.supabase_url?schema=api")
+    })
+
+    it("refuses to start an App whose reference names nothing, and says which", async () => {
+        const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined)
+        const { service, processManager } = makeFakes([referencing], { fleetEnv: {} })
+
+        await service.reconcileFleet()
+
+        // Never started with a half-substituted value.
+        expect(processManager.recreateAppProcess).not.toHaveBeenCalled()
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining("supabase_url"))
+        warn.mockRestore()
+    })
+
+    it("keeps the rest of the fleet running when one App's reference is broken", async () => {
+        vi.spyOn(console, "warn").mockImplementation(() => undefined)
+        const fine: AppConfig = { id: "id-2", name: "fine", entry: "i.js", env: {} }
+        const { service, processManager } = makeFakes([referencing, fine], { fleetEnv: {} })
+
+        await service.reconcileFleet()
+
+        expect(processManager.recreateAppProcess).toHaveBeenCalledTimes(1)
+        expect(processManager.recreateAppProcess).toHaveBeenCalledWith(expect.objectContaining({ name: "fine" }))
+    })
+
+    it("does not touch an App with no references", async () => {
+        const plain: AppConfig = { id: "id-1", name: "plain", entry: "i.js", env: { A: "1", B: "$HOME/x" } }
+        const { service, processManager } = makeFakes([plain], { fleetEnv: { supabase_url: "x" } })
+
+        await service.reconcileFleet()
+
+        expect(processManager.recreateAppProcess).toHaveBeenCalledWith(
+            expect.objectContaining({ env: { A: "1", B: "$HOME/x" } }),
+        )
+    })
+
+    it("resolves references when a config save recreates the App", async () => {
+        const { service, processManager } = makeFakes([referencing], {
+            fleetEnv: { supabase_url: "postgres://host/db" },
+        })
+
+        await service.updateAppConfig("id-1", { entry: "other.js" })
+
+        expect(processManager.recreateAppProcess).toHaveBeenCalledWith(
+            expect.objectContaining({
+                entry: "other.js",
+                env: { DATABASE_URL: "postgres://host/db?schema=api", PLAIN: "kept" },
+            }),
+        )
+    })
+})
+
+// Caught where the typo was made, rather than becoming an App that has quietly
+// stopped with the reason only in the log — AppState has no error state to show.
+describe("appService save-time reference validation", () => {
+    const withRef = (value: string): AppConfig => ({
+        id: "id-1",
+        name: "api",
+        entry: "index.js",
+        env: { DATABASE_URL: value },
+    })
+
+    it("refuses a save naming a fleet env key that does not exist", async () => {
+        const { service } = makeFakes([withRef("plain")], { fleetEnv: { supabase_url: "x" } })
+
+        const result = await service.updateAppConfig("id-1", { env: { DATABASE_URL: "$fleet.supabse_url" } })
+
+        expect(result).toEqual({ ok: false, code: "unknown-fleet-env", missing: ["supabse_url"] })
+    })
+
+    it("writes nothing when it refuses", async () => {
+        const { service, configs } = makeFakes([withRef("plain")], { fleetEnv: {} })
+
+        await service.updateAppConfig("id-1", { env: { DATABASE_URL: "$fleet.nope" } })
+
+        expect(configs.get("id-1")?.env).toEqual({ DATABASE_URL: "plain" })
+    })
+
+    it("does not touch the process when it refuses", async () => {
+        const { service, processManager } = makeFakes([withRef("plain")], { fleetEnv: {} })
+
+        await service.updateAppConfig("id-1", { env: { DATABASE_URL: "$fleet.nope" } })
+
+        expect(processManager.recreateAppProcess).not.toHaveBeenCalled()
+    })
+
+    it("names every missing key, so one save reports them all", async () => {
+        const { service } = makeFakes([withRef("plain")], { fleetEnv: {} })
+
+        const result = await service.updateAppConfig("id-1", { env: { A: "$fleet.one", B: "$fleet.two" } })
+
+        expect(result).toMatchObject({ code: "unknown-fleet-env" })
+        expect((result as { missing: string[] }).missing.sort()).toEqual(["one", "two"])
+    })
+
+    it("allows a save whose references all resolve", async () => {
+        const { service, configs } = makeFakes([withRef("plain")], { fleetEnv: { supabase_url: "postgres://x" } })
+
+        const result = await service.updateAppConfig("id-1", { env: { DATABASE_URL: "$fleet.supabase_url" } })
+
+        expect(result).toMatchObject({ ok: true })
+        expect(configs.get("id-1")?.env.DATABASE_URL).toBe("$fleet.supabase_url")
+    })
+
+    it("allows a save that changes something else while an existing reference still resolves", async () => {
+        const { service } = makeFakes([withRef("$fleet.supabase_url")], { fleetEnv: { supabase_url: "postgres://x" } })
+
+        await expect(service.updateAppConfig("id-1", { entry: "other.js" })).resolves.toMatchObject({ ok: true })
+    })
+
+    it("refuses a save that leaves an existing broken reference in place", async () => {
+        // The env is not being changed, but it is still what would be written.
+        const { service } = makeFakes([withRef("$fleet.gone")], { fleetEnv: {} })
+
+        await expect(service.updateAppConfig("id-1", { entry: "other.js" })).resolves.toMatchObject({
+            code: "unknown-fleet-env",
+        })
+    })
+
+    it("is unaffected by an App with no references at all", async () => {
+        const { service } = makeFakes([withRef("plain")], { fleetEnv: {} })
+
+        await expect(service.updateAppConfig("id-1", { entry: "other.js" })).resolves.toMatchObject({ ok: true })
     })
 })

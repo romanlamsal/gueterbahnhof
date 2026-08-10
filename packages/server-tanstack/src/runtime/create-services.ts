@@ -1,8 +1,10 @@
 import { join } from "node:path"
 import { createAppService } from "@/app-services/app-service.ts"
 import { createDeploymentService } from "@/app-services/deployment-service.ts"
+import { createFleetEnvService } from "@/app-services/fleet-env-service.ts"
 import { createAppConfigRepository } from "@/interface-services/app-config-repository.ts"
 import { createArtifactStore } from "@/interface-services/artifact-store.ts"
+import { createFleetEnvRepository } from "@/interface-services/fleet-env-repository.ts"
 import { pm2ProcessManager } from "@/interface-services/pm2-process-manager.ts"
 import { createPortProbe } from "@/interface-services/port-probe.ts"
 
@@ -21,6 +23,15 @@ export const createServices = (gueterbahnhofDir: string) => {
     const artifactStore = createArtifactStore(appsDir)
     const processManager = pm2ProcessManager
     const portProbe = createPortProbe()
+    const fleetEnvRepository = createFleetEnvRepository(gueterbahnhofDir)
+
+    const appService = createAppService({
+        configRepository,
+        artifactStore,
+        processManager,
+        portProbe,
+        fleetEnvRepository,
+    })
 
     return {
         appsDir,
@@ -28,8 +39,15 @@ export const createServices = (gueterbahnhofDir: string) => {
         artifactStore,
         processManager,
         portProbe,
-        appService: createAppService({ configRepository, artifactStore, processManager, portProbe }),
-        deploymentService: createDeploymentService({ configRepository, artifactStore, processManager }),
+        fleetEnvRepository,
+        appService,
+        fleetEnvService: createFleetEnvService({ fleetEnvRepository, configRepository, appService }),
+        deploymentService: createDeploymentService({
+            configRepository,
+            artifactStore,
+            processManager,
+            fleetEnvRepository,
+        }),
     }
 }
 

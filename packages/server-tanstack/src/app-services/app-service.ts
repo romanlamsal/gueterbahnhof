@@ -1,28 +1,54 @@
 import { needsRecreate } from "@/domain/app-config-change.ts"
 import { deriveAppState } from "@/domain/app-state.ts"
 import { findOrphanProcessNames } from "@/domain/fleet.ts"
+import { referencedFleetKeys, resolveFleetReferences } from "@/domain/fleet-env.ts"
 import { candidatePorts, claimedPorts, needsAssignedPort } from "@/domain/port-assignment.ts"
 import type { AppConfig, AppConfigRepository } from "@/interface-services/app-config-repository.ts"
 import type { ArtifactStore } from "@/interface-services/artifact-store.ts"
+import type { FleetEnvRepository } from "@/interface-services/fleet-env-repository.ts"
 import type { PortProbe } from "@/interface-services/port-probe.ts"
 import { type ProcessManager, toProcessSpec } from "@/interface-services/process-manager.ts"
 
 export type AppMutationResult =
     | { ok: true; config: AppConfig }
     | { ok: false; code: "not-found" | "name-taken" | "invalid" }
+    // Carries the names, because the operator needs to know WHICH key was
+    // mistyped, not merely that one was.
+    | { ok: false; code: "unknown-fleet-env"; missing: string[] }
 
 export const createAppService = ({
     configRepository,
     processManager,
     artifactStore,
     portProbe,
+    fleetEnvRepository,
 }: {
     configRepository: AppConfigRepository
     processManager: ProcessManager
     artifactStore: Pick<ArtifactStore, "getAppDir" | "deleteAppDir" | "hasArtifact">
     portProbe: PortProbe
+    fleetEnvRepository: FleetEnvRepository
 }) => {
-    const specFor = (config: AppConfig) => toProcessSpec(config, artifactStore.getAppDir(config.id))
+    // Resolved on the way to the process, never on the way to disk: the App
+    // Config keeps the reference so a shared value is not copied into it.
+    const specFor = (config: AppConfig, fleetEnv: Record<string, string>) => {
+        const { env, missing } = resolveFleetReferences(config.env, fleetEnv)
+
+        if (missing.length > 0) {
+            return { ok: false as const, reason: `unknown fleet env ${missing.map(name => `'${name}'`).join(", ")}` }
+        }
+
+        return { ok: true as const, spec: toProcessSpec({ ...config, env }, artifactStore.getAppDir(config.id)) }
+    }
+
+    // Refuses rather than starting an App with a half-substituted value. The
+    // reason travels the same route as "no Entry configured", so reconciliation
+    // reports it per App without a new channel.
+    const recreateWithFleetEnv = async (config: AppConfig, fleetEnv: Record<string, string>) => {
+        const resolved = specFor(config, fleetEnv)
+
+        return resolved.ok ? processManager.recreateAppProcess(resolved.spec) : resolved
+    }
 
     const firstFreePort = async (claimed: ReadonlySet<number>) => {
         for (const candidate of candidatePorts(claimed)) {
@@ -113,9 +139,9 @@ export const createAppService = ({
             // Before the fan-out below, never during it.
             const configs = await assignPorts(loaded, loaded, reservedPorts)
 
-            const outcomes = await Promise.all(
-                configs.map(config => processManager.recreateAppProcess(specFor(config))),
-            )
+            const fleetEnv = await fleetEnvRepository.readFleetEnv()
+
+            const outcomes = await Promise.all(configs.map(config => recreateWithFleetEnv(config, fleetEnv)))
 
             const runningFleet = await processManager.listFleetProcesses()
             const orphans = findOrphanProcessNames(
@@ -141,6 +167,33 @@ export const createAppService = ({
                 `Started ${outcomes.length - failures.length} of ${configs.length} apps` +
                     (orphans.length ? `, reclaimed ${orphans.length} orphan(s).` : "."),
             )
+        },
+
+        // A Fleet Env value that changed is a value some Apps are now running
+        // on wrongly. Only those Apps, and only for keys that actually moved.
+        async recreateAppsReferencing(keys: ReadonlySet<string>) {
+            if (keys.size === 0) {
+                return
+            }
+
+            const configs = await configRepository.listAppConfigs()
+            const affected = configs.filter(config => [...referencedFleetKeys(config.env)].some(key => keys.has(key)))
+
+            if (affected.length === 0) {
+                return
+            }
+
+            const fleetEnv = await fleetEnvRepository.readFleetEnv()
+
+            for (const config of affected) {
+                const outcome = await recreateWithFleetEnv(config, fleetEnv)
+
+                if (!outcome.ok) {
+                    console.warn(`Did not restart '${config.name}' after a fleet env change: ${outcome.reason}.`)
+                }
+            }
+
+            console.log(`Restarted ${affected.length} app(s) after a fleet env change.`)
         },
 
         // Shutdown: take down our own apps and nothing else. The daemon and any
@@ -195,6 +248,18 @@ export const createAppService = ({
                 return { ok: false, code: "name-taken" }
             }
 
+            // Refused before anything is written: a mistyped reference is
+            // caught where it was made, rather than becoming an App that has
+            // quietly stopped with the reason only in the log.
+            const { missing } = resolveFleetReferences(
+                partial.env ?? current.env,
+                await fleetEnvRepository.readFleetEnv(),
+            )
+
+            if (missing.length > 0) {
+                return { ok: false, code: "unknown-fleet-env", missing }
+            }
+
             const response = await configRepository.updateAppConfig(appId, partial)
 
             if (!response) {
@@ -215,7 +280,7 @@ export const createAppService = ({
                     await processManager.deleteAppProcess(prevConfig.name)
                 }
 
-                await processManager.recreateAppProcess(specFor(currConfig))
+                await recreateWithFleetEnv(currConfig, await fleetEnvRepository.readFleetEnv())
             }
 
             return { ok: true, config: currConfig }

@@ -8,11 +8,13 @@ const makeFakes = ({
     extract = vi.fn(async () => "/extracted/id-1"),
     start = vi.fn(async () => ({ ok: true }) as ProcessOutcome),
     processRunning = true,
+    fleetEnv = {},
 }: {
     configs?: AppConfig[]
     extract?: ReturnType<typeof vi.fn>
     start?: ReturnType<typeof vi.fn>
     processRunning?: boolean
+    fleetEnv?: Record<string, string>
 } = {}) => {
     let nextId = 0
     const calls: string[] = []
@@ -39,6 +41,7 @@ const makeFakes = ({
                 return start(...args)
             }),
         },
+        fleetEnvRepository: { readFleetEnv: async () => fleetEnv, writeFleetEnv: async () => undefined },
         generateId: () => `dep-${++nextId}`,
     }
 

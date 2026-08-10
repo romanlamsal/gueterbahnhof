@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useEffect } from "react"
 import type { AppMutationResult } from "@/app-services/app-service.ts"
 import { AppConfigForm, type AppConfigPatch, type SaveOutcome } from "@/components/AppConfigForm.tsx"
+import { describeMissingFleetKeys } from "@/domain/fleet-env.ts"
 import type { AppConfig } from "@/interface-services/app-config-repository.ts"
 import { deleteAppFunc, loadAppsFunc, updateAppFunc } from "@/routes/ui/-lib/server-funcs.ts"
 
@@ -67,7 +68,18 @@ function RouteComponent() {
     const save = async (patch: AppConfigPatch): Promise<SaveOutcome> => {
         const result = await updateAppConfig(patch)
 
-        return result.ok ? { ok: true } : { ok: false, message: mutationErrorMessages[result.code] ?? "Saving failed." }
+        if (result.ok) {
+            return { ok: true }
+        }
+
+        // The only refusal that has to name something, so it is phrased where
+        // it can be tested rather than inline here.
+        const message =
+            result.code === "unknown-fleet-env"
+                ? describeMissingFleetKeys(result.missing)
+                : (mutationErrorMessages[result.code] ?? "Saving failed.")
+
+        return { ok: false, message }
     }
 
     return <AppConfigForm key={appId} config={app.config} onSave={save} onDelete={deleteApp} />

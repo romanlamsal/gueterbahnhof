@@ -1,7 +1,9 @@
 import { randomUUID } from "node:crypto"
 import { createDeployment, type Deployment, isInFlight, transitionDeployment } from "@/domain/deployment.ts"
+import { resolveFleetReferences } from "@/domain/fleet-env.ts"
 import type { AppConfig, AppConfigRepository } from "@/interface-services/app-config-repository.ts"
 import type { ArtifactStore } from "@/interface-services/artifact-store.ts"
+import type { FleetEnvRepository } from "@/interface-services/fleet-env-repository.ts"
 import { type ProcessManager, toProcessSpec } from "@/interface-services/process-manager.ts"
 
 // Deployment records are in-memory only, capped per app (ADR-0001).
@@ -16,11 +18,13 @@ export const createDeploymentService = ({
     configRepository,
     artifactStore,
     processManager,
+    fleetEnvRepository,
     generateId = randomUUID,
 }: {
     configRepository: Pick<AppConfigRepository, "findAppConfigByName">
     artifactStore: Pick<ArtifactStore, "getAppDir" | "extractArtifact">
     processManager: Pick<ProcessManager, "getAppProcess" | "stopAppProcess" | "startAppProcess">
+    fleetEnvRepository: FleetEnvRepository
     generateId?: () => string
 }) => {
     const deploymentsByApp = new Map<string, Deployment[]>()
@@ -62,8 +66,17 @@ export const createDeploymentService = ({
 
         current = transition(current, "starting")
 
+        const { env, missing } = resolveFleetReferences(config.env, await fleetEnvRepository.readFleetEnv())
+
+        if (missing.length > 0) {
+            const names = missing.map(name => `'${name}'`).join(", ")
+            return transition(current, "failed", `The app did not start: unknown fleet env ${names}.`)
+        }
+
         // The Process Manager reports why, including "no Entry configured".
-        const started = await processManager.startAppProcess(toProcessSpec(config, artifactStore.getAppDir(config.id)))
+        const started = await processManager.startAppProcess(
+            toProcessSpec({ ...config, env }, artifactStore.getAppDir(config.id)),
+        )
 
         if (!started.ok) {
             return transition(current, "failed", `The app did not start: ${started.reason}.`)

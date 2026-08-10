@@ -78,6 +78,13 @@ function RouteComponent() {
                         ) : null}
                     </Button>
                 ))}
+                <Button
+                    variant={"ghost"}
+                    onClick={() => navigate({ to: "/ui/fleet" })}
+                    className={"mt-4 justify-start"}
+                >
+                    Fleet env
+                </Button>
             </aside>
             <Suspense>
                 <Outlet />
