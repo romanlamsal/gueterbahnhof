@@ -1,27 +1,11 @@
-import type { ProcessDescription, StartOptions } from "pm2"
+import type { ProcessDescription } from "pm2"
 import pm2 from "pm2"
-import type { AppProcessSpec, ManagedProcess, ProcessManager, ProcessOutcome } from "./process-manager.ts"
+import { FLEET_NAMESPACE, toStartOptions } from "./pm2-start-options.ts"
+import type { ManagedProcess, ProcessManager, ProcessOutcome } from "./process-manager.ts"
 
 function log(...parts: unknown[]) {
     console.log("[pm2]", ...parts)
 }
-
-// Prefix every app log line with a readable timestamp (24h).
-const LOG_DATE_FORMAT = "YYYY-MM-DD HH:mm:ss"
-
-// A grouping label, NOT a boundary: pm2 resolves stop/delete/describe by name
-// across every namespace, so this only groups the fleet in `pm2 list` and
-// enables `pm2 stop gueterbahnhof` as a manual lever. See ADR-0004.
-export const FLEET_NAMESPACE = "gueterbahnhof"
-
-const toStartOptions = (spec: AppProcessSpec): StartOptions => ({
-    name: spec.name,
-    script: spec.entry,
-    cwd: spec.cwd,
-    env: spec.env,
-    namespace: FLEET_NAMESPACE,
-    log_date_format: LOG_DATE_FORMAT,
-})
 
 // pm2 sets pm2_env.namespace at runtime but omits it from its types.
 const namespaceOf = (proc: ProcessDescription) => (proc.pm2_env as { namespace?: string } | undefined)?.namespace

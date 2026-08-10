@@ -1,5 +1,17 @@
 # @lamsal-de/gueterbahnhof
 
+## 1.4.1
+
+### Patch Changes
+
+-   **Security: apps could read the server's API key.** pm2 hands an app the entire environment of the process that started it and then layers the app's own env on top. Gueterbahnhof keeps its configuration in that environment — the API key included, because the built server reads it from there — so every deployed app could read `GUETERBAHNHOF_API_KEY` and use it to drive the management API or deploy over any other app. Anything else in `~/.gueterbahnhof` was exposed the same way.
+
+    Apps now start with `GUETERBAHNHOF_*` filtered out of the inherited environment. Their own env is untouched, and `PATH`, `HOME` and the rest still come through.
+
+    Present in every version up to 1.4.0. If you have deployed anything you do not fully trust, rotate your API key after upgrading.
+
+    If an app of yours relied on inheriting `GUETERBAHNHOF_*` — deploying other apps with the inherited key, for instance — set what it needs in that app's own env explicitly.
+
 ## 1.4.0
 
 ### Minor Changes
